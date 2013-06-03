@@ -2,6 +2,8 @@ import random as r
 import math as m
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import statsmodels.api as sm
 
 class modelFitter:
 
@@ -10,164 +12,143 @@ class modelFitter:
         #store the kc's belonging to each item
         self.ikc=[]
         #lists that will hold the parameters of items and students
-        self.ca=[]
-        self.cg=[]
-        self.cr=[]
-        self.cb=[]
-        self.st=[]
-        self.se=[]
+        self.ca=np.zeros(nrkc)
+        self.cg=np.zeros(nrkc)
+        self.cr=np.zeros(nrkc)
+        self.cb=np.zeros(nrkc)
+        self.st=np.zeros(nrs)
+        self.se=np.zeros(nrs)
         #linkage of kcs to items is known
         self.ikc=ikc
         self.data=data
         #create student parameter estimates, now done in same fashion as generating data
         for i in range(nrs):
-            self.st.append(r.normalvariate(0,1))
-            self.se.append(r.uniform(.04,.2))
+            self.st[i]=r.normalvariate(0,.5)
+            self.se[i]=r.uniform(.06,.15)
 
         #create knowledge component parameter estimates, idem as above
         for i in range(nrkc):
-            self.ca.append(r.uniform(.5,2))
-            g=r.uniform(.5,2)
-            self.cg.append(g)
-            self.cr.append(g*r.uniform(.2,.8))
-            self.cb.append(r.normalvariate(0,1))
+            self.ca[i]=r.uniform(.75,1.5)
+            g=r.uniform(.75,1.5)
+            self.cg[i]=g
+            self.cr[i]=g*r.uniform(.2,.8)
+            self.cb[i]=r.normalvariate(0,.5)
 
     def iterate(self,maxiterations=250):
-        delist=[]
-        dtlist=[]
+        #keep track of the error rate over the different itterations
         erlist=[]
-
-        dalist=[]
-        dglist=[]
-        drlist=[]
-        dblist=[]
-
-
         # this method performs iterative alternating logarithmic optamilatization of the logit of p for all datapoints
-        for i in range(1):
-
-            #first estimate the user parameters
-            for j in range(maxiterations):
-                totalerror=0.0
-                #keep track of the derivative in parameters
-                dst=[0]*len(self.st)
-                dse=[0]*len(self.st)
-                #keep track of questions answered correctly and questions answered wrongly
-                kcc = [0]*len(self.ca)
-                kcf = [0]*len(self.ca)
-                for d in self.data:
-                    s=d[0]
-                    it=d[1]
-                    x=0
-                    k=float(len(self.ikc[it]))
-                    numse=0
-                    numte=0
-                    for c in self.ikc[it]:
-                        x+=self.ca[c]*self.st[s]/k+(kcf[c]*self.cr[c]+kcc[c]*self.cg[c])*self.se[s]-self.cb[c]
-                        numte+=self.ca[c]/k
-                        numse+=(kcc[c]*self.cg[c]+kcf[c]*self.cr[c])
-                        if d[2]:
-                            kcc[c]+=1
-                        else:
-                            kcf[c]+=1
+        for i in range(5):
+            nrs=len(self.st)
+            nrkc=len(self.ca)
+            #first fit the user parameters
+            #Create an array of dimensions number of datapoints by number of students *2 + number of kcs
+            studentdata=np.zeros((len(self.data),nrs*2+nrkc+1))
+            #keep track of questions answered correctly and questions answered wrongly
+            kcc = np.zeros((nrs,nrkc))
+            kcf = np.zeros((nrs,nrkc))
+            totalerror=0.0
+            for nr,d in enumerate(self.data):
+                s=d[0]
+                it=d[1]
+                x=0
+                k=float(len(self.ikc[it]))
+                for c in self.ikc[it]:
+                    x+=self.ca[c]*self.st[s]/k+(kcf[s,c]*self.cr[c]+kcc[s,c]*self.cg[c])*self.se[s]-self.cb[c]
+                    studentdata[nr,s]+=self.ca[c]/k
+                    studentdata[nr,s+nrs]+=self.cg[c]*kcc[s,c]+self.cr[c]*kcf[s,c]
+                    studentdata[nr,nrs*2+c]=1
+                    if d[2]:
+                        kcc[s,c]+=1
+                    else:
+                        kcf[s,c]+=1
+                studentdata[nr,-1]=d[2]
+                try:
                     big=m.exp(x)+1
                     if d[2]:
                         totalerror+=1/big
-                        dst[s]+=numte/big
-                        dse[s]+=numse/big
                     else:
                         totalerror+=1-(1/big)
-                        dst[s]-=numte*(big-1)/big
-                        dse[s]-=numse*(big-1)/big
-                #finally update the parameters
-                totaldert=0
-                totaldere=0
-                #First get the size of the gradients
-                totaldert=sum(np.power(dst,2))
-                totaldere=sum(np.power(dse,2))
-                step=((maxiterations-i)/maxiterations)**3
-                #step=1
-                #Better alternative below
-##                for s in range(len(self.st)):
-##                    self.st[s]+=dst[s]/m.sqrt(totaldert)*step*.1
-##                    self.se[s]+=dse[s]/m.sqrt(totaldere)*step*.01
+                except:
+                    if not d[2]:
+                        totalerror+=1
+            data=pd.DataFrame(studentdata)
+            
+            train_cols = data.columns[:-1]
+            label_cols = data.columns[-1]
+            logit = sm.Logit(data[label_cols], data[train_cols])
+            result=logit.fit()
+            #some weird bug makes this impossible, hence the solution below            
+#            self.st=result.params[:nrs]
+#            self.se=result.params[nrs:nrs*2]
+#            self.cb=result.params[nrs*2:]
+            for j in range(nrs):
+                self.st[j]=result.params[j]
+                self.se[j]=result.params[nrs+j]
+            for j in range(nrkc):
+                self.cb[j]=result.params[nrs*2+j]
+                
+            #print result.summary() 
+            print sum(abs(self.st))/nrs, sum(abs(self.se))/nrs, sum(abs(self.cb))/nrkc
+            erlist.append(totalerror/len(self.data))
+            print(totalerror/len(self.data))
+            
+            #Now estimate the kc parameters
+            kcdata=np.zeros((len(self.data),4*nrkc+1))
+            kcc = np.zeros((nrs,nrkc))
+            kcf = np.zeros((nrs,nrkc))
+            totalerror=0.0    
+            for nr,d in enumerate(self.data):
+                s=d[0]
+                it=d[1]
+                k=float(len(self.ikc[it]))
+                x=0
+                for c in self.ikc[it]:
+                    x+=self.ca[c]*self.st[s]/k+(kcf[s,c]*self.cr[c]+kcc[s,c]*self.cg[c])*self.se[s]-self.cb[c]
+                    kcdata[nr,c]+=self.st[s]/k
+                    kcdata[nr,c+nrkc]+=self.se[s]*kcc[s,c]
+                    kcdata[nr,c+2*nrkc]+=self.se[s]*kcf[s,c]
+                    kcdata[nr,nrkc*3+c]=1
+                    if d[2]:
+                        kcc[s,c]+=1
+                    else:
+                        kcf[s,c]+=1
+                kcdata[nr,-1]=d[2]
+                try:
+                    big=m.exp(x)+1
+                    if d[2]:
+                        totalerror+=1/big
+                    else:
+                        totalerror+=1-(1/big)
+                except:
+                    if not d[2]:
+                        totalerror+=1
+            erlist.append(totalerror/len(self.data))
+            print (totalerror/len(self.data))
+            data=pd.DataFrame(kcdata)
+#            erlist.append(totalerror/len(self.data))
+#            print(totalerror/len(self.data))
+            train_cols = data.columns[:-1]
+            label_cols = data.columns[-1]
+            logit = sm.Logit(data[label_cols], data[train_cols])
+            result=logit.fit()
+            #same problem with slicing as above, thus a forloop
+            for j in range(nrkc):
+                self.ca[j]=result.params[j]
+                self.cg[j]=result.params[nrkc+j]
+                self.cr[j]=result.params[nrkc*2+j]
+                self.cb[j]=result.params[nrkc*3+j]
+                
+            print sum(abs(self.ca))/nrkc, sum(abs(self.cg))/nrkc, sum(abs(self.cr))/nrkc, sum(abs(self.cb))/nrkc
+            #normalize st and ca with eachother
+#            size=sum(abs(self.st))/nrs
+#            self.st/=size
+#            self.ca*=size
 
-                self.st=np.add(self.st,np.multiply(dst,step*.1/m.sqrt(totaldert)))
-                self.se=np.add(self.se,np.multiply(dse,step*.01/m.sqrt(totaldere)))
-                dtlist.append(sum(np.abs(dst)))
-                delist.append(sum(np.abs(dse)))
-                erlist.append(totalerror/len(self.data))
-
-
-##            for j in range(maxiterations):
-##                totalerror=0.0
-##                #keep track of the derivative in parameters
-##                dca=[0]*len(self.st)
-##                dcg=[0]*len(self.st)
-##                dcr=[0]*len(self.st)
-##                dcb=[0]*len(self.st)
-##                #keep track of questions answered correctly and questions answered wrongly
-##                kcc = [0]*len(self.ca)
-##                kcf = [0]*len(self.ca)
-##                for d in self.data:
-##                    s=d[0]
-##                    it=d[1]
-##                    x=0
-##                    k=float(len(self.ikc[it]))
-##                    for c in self.ikc[it]:
-##                        x+=self.ca[c]*self.st[s]/k+(kcf[c]*self.cr[c]+kcc[c]*self.cg[c])*self.se[s]-self.cb[c]
-##                    big=m.exp(x)+1
-##                    for c in self.ikc[it]:
-##                        if d[2]:
-##                            totalerror+=(1/(big))/k
-##                            dca[c]+=(self.st[s]/k)/big
-##                            dcg[c]+=self.se[s]*kcc[c]/big
-##                            dcr[c]+=self.se[s]*kcf[c]/big
-##                            dcb[c]-=1/big
-##                            kcc[c]+=1
-##                        else:
-##                            totalerror+=(1-(1/big))/k
-##                            dca[c]-=(self.st[s]/k)*(big-1)/big
-##                            dcg[c]-=self.se[s]*kcc[c]*(big-1)/big
-##                            dcr[c]-=self.se[s]*kcf[c]*(big-1)/big
-##                            dcb[c]+=(big-1)/big
-##                            kcf[c]+=1
-##                #finally update the parameters
-##                totaldca=0
-##                totaldcg=0
-##                totaldcr=0
-##                totaldcb=0
-##                #First get the size of the gradients
-##                for c in range(len(self.ca)):
-##                    totaldca+=dca[c]**2
-##                    totaldcg+=dcg[c]**2
-##                    totaldcr+=dcr[c]**2
-##                    totaldcb+=dcb[c]**2
-##                step=((maxiterations-i)/maxiterations)**2
-##                #step=1
-##                for c in range(len(self.ca)):
-##                    self.ca[c]+=dca[c]/m.sqrt(totaldca)*step*.02
-##                    self.cg[c]+=dcg[c]/m.sqrt(totaldcg)*step*.01
-##                    self.cr[c]+=dcr[c]/m.sqrt(totaldcr)*step*.01
-##                    self.cb[c]+=dcb[c]/m.sqrt(totaldcb)*step*.01
-##                #print totaldca,totaldcg,totaldcr, totaldcb
-##                dalist.append(m.sqrt(totaldca))
-##                dglist.append(m.sqrt(totaldcg))
-##                drlist.append(m.sqrt(totaldcr))
-##                dblist.append(m.sqrt(totaldcb))
-##                erlist.append(totalerror/len(self.data))
-
-        plt.figure(1)
-        plt.subplot(311)
-        plt.plot(dtlist)
-        plt.ylabel('dt')
-        plt.subplot(312)
-        plt.plot(delist)
-        plt.ylabel('de')
-        plt.subplot(313)
-        plt.plot(erlist)
-        plt.ylabel('error')
-        plt.show()
+#        plt.figure(1)
+#        plt.plot(erlist)
+#        plt.ylabel('error')
+#        plt.show()
 
 ##        plt.figure(2)
 ##        plt.subplot(231)
