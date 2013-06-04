@@ -54,7 +54,7 @@ class dataGenerator:
 
         for s in range(nrs):
             #Number of questions answered by student, keep a list of the questions
-            nrans=r.normalvariate(25,5)
+            nrans=r.normalvariate(30,5)
             if nrans<1:
                 nrans=1
             self.generateData(s,nrans)

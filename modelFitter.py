@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
+from sklearn import linear_model
 
 class modelFitter:
 
@@ -38,12 +39,13 @@ class modelFitter:
         #keep track of the error rate over the different itterations
         erlist=[]
         # this method performs iterative alternating logarithmic optamilatization of the logit of p for all datapoints
-        for i in range(5):
+        labels=np.zeros(len(self.data))
+        for i in range(15):
             nrs=len(self.st)
             nrkc=len(self.ca)
             #first fit the user parameters
             #Create an array of dimensions number of datapoints by number of students *2 + number of kcs
-            studentdata=np.zeros((len(self.data),nrs*2+nrkc+1))
+            studentdata=np.zeros((len(self.data),nrs*2+nrkc))
             #keep track of questions answered correctly and questions answered wrongly
             kcc = np.zeros((nrs,nrkc))
             kcf = np.zeros((nrs,nrkc))
@@ -53,6 +55,7 @@ class modelFitter:
                 it=d[1]
                 x=0
                 k=float(len(self.ikc[it]))
+                labels[nr]=d[2]
                 for c in self.ikc[it]:
                     x+=self.ca[c]*self.st[s]/k+(kcf[s,c]*self.cr[c]+kcc[s,c]*self.cg[c])*self.se[s]-self.cb[c]
                     studentdata[nr,s]+=self.ca[c]/k
@@ -62,7 +65,6 @@ class modelFitter:
                         kcc[s,c]+=1
                     else:
                         kcf[s,c]+=1
-                studentdata[nr,-1]=d[2]
                 try:
                     big=m.exp(x)+1
                     if d[2]:
@@ -72,21 +74,14 @@ class modelFitter:
                 except:
                     if not d[2]:
                         totalerror+=1
-            data=pd.DataFrame(studentdata)
             
-            train_cols = data.columns[:-1]
-            label_cols = data.columns[-1]
-            logit = sm.Logit(data[label_cols], data[train_cols])
-            result=logit.fit()
-            #some weird bug makes this impossible, hence the solution below            
-#            self.st=result.params[:nrs]
-#            self.se=result.params[nrs:nrs*2]
-#            self.cb=result.params[nrs*2:]
-            for j in range(nrs):
-                self.st[j]=result.params[j]
-                self.se[j]=result.params[nrs+j]
-            for j in range(nrkc):
-                self.cb[j]=result.params[nrs*2+j]
+            model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1', C=2000)
+            model.fit(studentdata,labels)
+                      
+            self.st=model.coef_[0][:nrs].copy()
+            self.se=model.coef_[0][nrs:nrs*2].copy()
+            self.cb=model.coef_[0][nrs*2:].copy()
+
                 
             #print result.summary() 
             print sum(abs(self.st))/nrs, sum(abs(self.se))/nrs, sum(abs(self.cb))/nrkc
@@ -94,7 +89,7 @@ class modelFitter:
             print(totalerror/len(self.data))
             
             #Now estimate the kc parameters
-            kcdata=np.zeros((len(self.data),4*nrkc+1))
+            kcdata=np.zeros((len(self.data),4*nrkc))
             kcc = np.zeros((nrs,nrkc))
             kcf = np.zeros((nrs,nrkc))
             totalerror=0.0    
@@ -113,7 +108,6 @@ class modelFitter:
                         kcc[s,c]+=1
                     else:
                         kcf[s,c]+=1
-                kcdata[nr,-1]=d[2]
                 try:
                     big=m.exp(x)+1
                     if d[2]:
@@ -125,20 +119,14 @@ class modelFitter:
                         totalerror+=1
             erlist.append(totalerror/len(self.data))
             print (totalerror/len(self.data))
-            data=pd.DataFrame(kcdata)
-#            erlist.append(totalerror/len(self.data))
-#            print(totalerror/len(self.data))
-            train_cols = data.columns[:-1]
-            label_cols = data.columns[-1]
-            logit = sm.Logit(data[label_cols], data[train_cols])
-            result=logit.fit()
-            #same problem with slicing as above, thus a forloop
-            for j in range(nrkc):
-                self.ca[j]=result.params[j]
-                self.cg[j]=result.params[nrkc+j]
-                self.cr[j]=result.params[nrkc*2+j]
-                self.cb[j]=result.params[nrkc*3+j]
-                
+            
+            model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1', C=2000)
+            model.fit(kcdata,labels)
+            
+            self.ca=model.coef_[0][:nrkc].copy()
+            self.cg=model.coef_[0][nrkc:nrkc*2].copy()
+            self.cr=model.coef_[0][nrkc*2:nrkc*3].copy()
+            self.cb=model.coef_[0][nrkc*3:].copy()
             print sum(abs(self.ca))/nrkc, sum(abs(self.cg))/nrkc, sum(abs(self.cr))/nrkc, sum(abs(self.cb))/nrkc
             #normalize st and ca with eachother
 #            size=sum(abs(self.st))/nrs
