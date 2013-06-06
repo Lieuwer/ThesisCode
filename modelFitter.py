@@ -2,8 +2,6 @@ import random as r
 import math as m
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-import statsmodels.api as sm
 from sklearn import linear_model
 
 class modelFitter:
@@ -19,6 +17,9 @@ class modelFitter:
         self.cb=np.zeros(nrkc)
         self.st=np.zeros(nrs)
         self.se=np.zeros(nrs)
+        
+        self.kcc=np.zeros((nrs,nrkc))
+        self.kcf=np.zeros((nrs,nrkc))
         #linkage of kcs to items is known
         self.ikc=ikc
         self.data=data
@@ -40,6 +41,8 @@ class modelFitter:
         erlist=[]
         # this method performs iterative alternating logarithmic optamilatization of the logit of p for all datapoints
         labels=np.zeros(len(self.data))
+        kcc=self.kcc
+        kcf=self.kcf
         for i in range(15):
             nrs=len(self.st)
             nrkc=len(self.ca)
@@ -60,7 +63,7 @@ class modelFitter:
                     x+=self.ca[c]*self.st[s]/k+(kcf[s,c]*self.cr[c]+kcc[s,c]*self.cg[c])*self.se[s]-self.cb[c]
                     studentdata[nr,s]+=self.ca[c]/k
                     studentdata[nr,s+nrs]+=self.cg[c]*kcc[s,c]+self.cr[c]*kcf[s,c]
-                    studentdata[nr,nrs*2+c]=1
+                    studentdata[nr,nrs*2+c]=-1
                     if d[2]:
                         kcc[s,c]+=1
                     else:
@@ -75,7 +78,7 @@ class modelFitter:
                     if not d[2]:
                         totalerror+=1
             
-            model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1', C=2000)
+            model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1', C=10^9)
             model.fit(studentdata,labels)
                       
             self.st=model.coef_[0][:nrs].copy()
@@ -103,7 +106,7 @@ class modelFitter:
                     kcdata[nr,c]+=self.st[s]/k
                     kcdata[nr,c+nrkc]+=self.se[s]*kcc[s,c]
                     kcdata[nr,c+2*nrkc]+=self.se[s]*kcf[s,c]
-                    kcdata[nr,nrkc*3+c]=1
+                    kcdata[nr,nrkc*3+c]=-1
                     if d[2]:
                         kcc[s,c]+=1
                     else:
@@ -120,7 +123,7 @@ class modelFitter:
             erlist.append(totalerror/len(self.data))
             print (totalerror/len(self.data))
             
-            model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1', C=2000)
+            model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1', C=10^9)
             model.fit(kcdata,labels)
             
             self.ca=model.coef_[0][:nrkc].copy()
@@ -162,7 +165,12 @@ class modelFitter:
 
 
 
-
+    def predict(self,s,i):
+        k=float(len(self.ikc[i]))
+        x=0
+        for c in self.ikc[i]:
+            x+=self.ca[c]*self.st[s]/k+(self.kcf[s,c]*self.cr[c]+self.kcc[s,c]*self.cg[c])*self.se[s]-self.cb[c]
+        return 1/(m.exp(-x)+1)
 
     def normalizegre(self):
         i=1

@@ -2,6 +2,7 @@ from collections import defaultdict
 import random as r
 import cPickle as pickle
 import math as m
+import numpy as np
 
 def distribution(plist):
         n=r.random()
@@ -27,7 +28,10 @@ class dataGenerator:
         self.st=[]
         self.se=[]
         self.data=[]
+        self.testdata=[]
         self.totalerror=0.0
+        self.testerror=0.0
+        
         #create student parameters
         for i in range(nrs):
             self.st.append(r.normalvariate(-.03,1))
@@ -59,6 +63,7 @@ class dataGenerator:
                 nrans=1
             self.generateData(s,nrans)
         print "error in generating", self.totalerror/len(self.data)
+        print "error in testdata", self.testerror/len(self.testdata)
 
     def generateData(self,s,nrans):
         totc=0
@@ -91,7 +96,24 @@ class dataGenerator:
                 self.totalerror+=(1/(1+m.exp(-x)))
                 for kc in self.ikc[q]:
                     kcf[kc]+=1
+        #Finally get a single point of test data
+        q=r.randrange(len(self.ikc))
+        x=0
+        for kc in self.ikc[q]:
+            x+=self.ca[kc]*self.st[s]/len(self.ikc[q])+self.se[s]*self.cg[kc]*kcc[kc]+self.se[s]*self.cr[kc]*kcf[kc]-self.cb[kc]
+        if r.random()<(1/(1+m.exp(-x))):
+            self.testdata.append((s,q,1))
+            totc+=1
+            self.testerror+=(1/(1+m.exp(x)))
+            for kc in self.ikc[q]:
+                kcc[kc]+=1
 
+        else:
+            self.testdata.append((s,q,0))
+            totf+=1
+            self.testerror+=(1/(1+m.exp(-x)))
+            for kc in self.ikc[q]:
+                kcf[kc]+=1
         print totc,totf
 
 

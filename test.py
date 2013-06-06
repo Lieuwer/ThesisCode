@@ -44,7 +44,14 @@ def main():
     #data=dataGenerator.loadFile("test.data")
     model=modelFitter.modelFitter(nrs,nrkc,data.ikc,data.data)
     model.iterate()
-    #compareparameters(data,model)
-
+    #see how the model does on testset
+    testerror=0.0
+    for d in data.testdata:
+        if d[2]:
+            testerror+=1-model.predict(d[0],d[1])
+        else:
+            testerror+=model.predict(d[0],d[1])
+    print "Fitted model error on testset", testerror/len(data.testdata)
+    
 if __name__ == "__main__":
     main()
