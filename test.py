@@ -38,10 +38,10 @@ def main():
     nrkc = 15
     #distribution of components, cumilative starting at 1 components, up to length + 1
     kcdist = [.4,.65,.85,.99]
-    data = dataGenerator(nrs,nrq,nrkc,kcdist)
+    #data = dataGenerator(nrs,nrq,nrkc,kcdist)
     #data.save("test.data")
     #print len(data.data)
-    #data=dataGenerator.loadFile("test.data")
+    data=dataGenerator.loadFile("test.data")
     model=modelFitter.modelFitter(nrs,nrkc,data.ikc,data.data)
     model.iterate()
     #see how the model does on testset

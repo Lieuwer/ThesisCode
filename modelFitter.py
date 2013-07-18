@@ -43,7 +43,7 @@ class modelFitter:
         labels=np.zeros(len(self.data))
         kcc=self.kcc
         kcf=self.kcf
-        for i in range(15):
+        for i in range(30):
             nrs=len(self.st)
             nrkc=len(self.ca)
             #first fit the user parameters
@@ -135,6 +135,10 @@ class modelFitter:
 #            size=sum(abs(self.st))/nrs
 #            self.st/=size
 #            self.ca*=size
+            #see if we want to get out of the loop
+            if erlist[-2]-erlist[-1]<.001:
+                print "Improvement threshold reached at iteration", i
+                break
 
 #        plt.figure(1)
 #        plt.plot(erlist)

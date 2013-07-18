@@ -121,6 +121,11 @@ class dataGenerator:
         filehandle= open (filename,"wb")
         pickle.dump(self,filehandle)
         filehandle.close()
+        
+    def saveData(data,filename):
+        filehandle= open (filename,"wb")
+        pickle.dump(data,filehandle)
+        filehandle.close()
 
 
 
