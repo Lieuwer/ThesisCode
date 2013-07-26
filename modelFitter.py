@@ -2,6 +2,7 @@ import random as r
 import math as m
 import matplotlib.pyplot as plt
 import numpy as np
+import scipy.sparse as sparsesp
 from sklearn import linear_model
 
 class modelFitter:
@@ -37,6 +38,8 @@ class modelFitter:
             self.cb[i]=r.normalvariate(0,.5)
 
     def iterate(self,maxiterations=250):
+        #keep track how often in succession no improvements were made        
+        noimprov=0
         #keep track of the error rate over the different itterations
         erlist=[]
         # this method performs iterative alternating logarithmic optamilatization of the logit of p for all datapoints
@@ -48,7 +51,8 @@ class modelFitter:
             nrkc=len(self.ca)
             #first fit the user parameters
             #Create an array of dimensions number of datapoints by number of students *2 + number of kcs
-            studentdata=np.zeros((len(self.data),nrs*2+nrkc))
+            studentdata=sparsesp.lil_matrix((len(self.data),nrs*2+nrkc),dtype=np.int32)
+            #studentdata=np.zeros((len(self.data),nrs*2+nrkc))
             #keep track of questions answered correctly and questions answered wrongly
             kcc = np.zeros((nrs,nrkc))
             kcf = np.zeros((nrs,nrkc))
@@ -92,7 +96,8 @@ class modelFitter:
             print(totalerror/len(self.data))
             
             #Now estimate the kc parameters
-            kcdata=np.zeros((len(self.data),4*nrkc))
+            kcdata=sparsesp.lil_matrix((len(self.data),4*nrkc),dtype=np.int32)
+            #kcdata=np.zeros((len(self.data),4*nrkc))
             kcc = np.zeros((nrs,nrkc))
             kcf = np.zeros((nrs,nrkc))
             totalerror=0.0    
@@ -136,7 +141,13 @@ class modelFitter:
 #            self.st/=size
 #            self.ca*=size
             #see if we want to get out of the loop
+            
+            
             if erlist[-2]-erlist[-1]<.001:
+                noimprov+=1
+            else:
+                noimprov=0
+            if noimprov>1:
                 print "Improvement threshold reached at iteration", i
                 break
 

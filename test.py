@@ -2,10 +2,7 @@ from dataGenerator import dataGenerator
 import modelFitter
 import numpy as np
 
-#TODO: 1. derivatives blijven dalen, maar totale probmissed stijgt?!? Iets mis met 1 van beiden. 2. Andere classe structuur? Meer klasses?
-# 3. num/scipy voor sneller updaten van parameters/ misschien zelfs slimme truck om paramter derivatives snel te regelen?
-
-#This progam should randomly generate parameters and/or data for the complex model
+#TODO:1. Andere classe structuur? Meer klasses?
 
 #Get some commandline stuff soon...
 def normalize(obj):
