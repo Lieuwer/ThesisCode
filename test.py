@@ -1,6 +1,7 @@
 from dataGenerator import dataGenerator
 import modelFitter
 import numpy as np
+import time
 
 #TODO:1. Andere classe structuur? Meer klasses?
 
@@ -35,12 +36,13 @@ def main():
     nrkc = 15
     #distribution of components, cumilative starting at 1 components, up to length + 1
     kcdist = [.4,.65,.85,.99]
-    #data = dataGenerator(nrs,nrq,nrkc,kcdist)
-    #data.save("test.data")
-    #print len(data.data)
-    data=dataGenerator.loadFile("test.data")
-    model=modelFitter.modelFitter(nrs,nrkc,data.ikc,data.data)
+    data = dataGenerator(nrs,nrq,nrkc,kcdist)
+    #data.save("test2.data")
+    #data=dataGenerator.loadFile("test2.data")
+    print "Using full matrix"
+    model=modelFitter.modelFitter(nrs,nrkc,data.ikc,data.data,True)
     model.iterate()
+    
     #see how the model does on testset
     testerror=0.0
     for d in data.testdata:
@@ -50,5 +52,19 @@ def main():
             testerror+=model.predict(d[0],d[1])
     print "Fitted model error on testset", testerror/len(data.testdata)
     
+    print "Using sparse matrix"
+    model=modelFitter.modelFitter(nrs,nrkc,data.ikc,data.data,False)
+    model.iterate()
+    testerror=0.0
+    for d in data.testdata:
+        if d[2]:
+            testerror+=1-model.predict(d[0],d[1])
+        else:
+            testerror+=model.predict(d[0],d[1])
+    print "Fitted model error on testset", testerror/len(data.testdata)    
+    
 if __name__ == "__main__":
+    t0=time.clock()
     main()
+    t1=time.clock()
+    #print "Time taken by all code", t1-t0

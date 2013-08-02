@@ -1,6 +1,6 @@
 import random as r
 import math as m
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import numpy as np
 import scipy.sparse as sparsesp
 from sklearn import linear_model
@@ -8,8 +8,9 @@ from sklearn import linear_model
 class modelFitter:
 
 
-    def __init__(self,nrs,nrkc,ikc,data):
+    def __init__(self,nrs,nrkc,ikc,data,fullmatrix=False):
         #store the kc's belonging to each item
+        self.fullmatrix=fullmatrix
         self.ikc=[]
         #lists that will hold the parameters of items and students
         self.ca=np.zeros(nrkc)
@@ -37,22 +38,26 @@ class modelFitter:
             self.cr[i]=g*r.uniform(.2,.8)
             self.cb[i]=r.normalvariate(0,.5)
 
-    def iterate(self,maxiterations=250):
+    def iterate(self,maxiterations=20):
         #keep track how often in succession no improvements were made        
         noimprov=0
-        #keep track of the error rate over the different itterations
-        erlist=[]
+        #keep track of the error rate over the different itterations, add 1 
+        #for the stopcriterion checker
+        erlist=[1]
         # this method performs iterative alternating logarithmic optamilatization of the logit of p for all datapoints
         labels=np.zeros(len(self.data))
         kcc=self.kcc
         kcf=self.kcf
-        for i in range(30):
+        for i in range(maxiterations):
             nrs=len(self.st)
             nrkc=len(self.ca)
             #first fit the user parameters
             #Create an array of dimensions number of datapoints by number of students *2 + number of kcs
-            studentdata=sparsesp.lil_matrix((len(self.data),nrs*2+nrkc),dtype=np.int32)
-            #studentdata=np.zeros((len(self.data),nrs*2+nrkc))
+            if self.fullmatrix:  
+                studentdata=np.zeros((len(self.data),nrs*2+nrkc))
+            else:
+                studentdata=sparsesp.lil_matrix((len(self.data),nrs*2+nrkc),dtype=np.int32)
+            
             #keep track of questions answered correctly and questions answered wrongly
             kcc = np.zeros((nrs,nrkc))
             kcf = np.zeros((nrs,nrkc))
@@ -82,22 +87,30 @@ class modelFitter:
                     if not d[2]:
                         totalerror+=1
             
-            model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1', C=10^9)
+            model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1',C=10^9)
             model.fit(studentdata,labels)
                       
             self.st=model.coef_[0][:nrs].copy()
             self.se=model.coef_[0][nrs:nrs*2].copy()
             self.cb=model.coef_[0][nrs*2:].copy()
 
-                
-            #print result.summary() 
-            print sum(abs(self.st))/nrs, sum(abs(self.se))/nrs, sum(abs(self.cb))/nrkc
-            erlist.append(totalerror/len(self.data))
             print(totalerror/len(self.data))
+            erlist.append(totalerror/len(self.data))
+            
+            if erlist[-2]-erlist[-1]<.001:
+                noimprov+=1
+            else:
+                noimprov=0
+            if noimprov>1:
+                print "Improvement threshold reached at iteration", i
+                break
+                
             
             #Now estimate the kc parameters
-            kcdata=sparsesp.lil_matrix((len(self.data),4*nrkc),dtype=np.int32)
-            #kcdata=np.zeros((len(self.data),4*nrkc))
+            if self.fullmatrix:
+                kcdata=np.zeros((len(self.data),4*nrkc))
+            else:
+                kcdata=sparsesp.lil_matrix((len(self.data),4*nrkc),dtype=np.int32)
             kcc = np.zeros((nrs,nrkc))
             kcf = np.zeros((nrs,nrkc))
             totalerror=0.0    
@@ -128,14 +141,13 @@ class modelFitter:
             erlist.append(totalerror/len(self.data))
             print (totalerror/len(self.data))
             
-            model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1', C=10^9)
+            model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1',C=10^9)
             model.fit(kcdata,labels)
             
             self.ca=model.coef_[0][:nrkc].copy()
             self.cg=model.coef_[0][nrkc:nrkc*2].copy()
             self.cr=model.coef_[0][nrkc*2:nrkc*3].copy()
             self.cb=model.coef_[0][nrkc*3:].copy()
-            print sum(abs(self.ca))/nrkc, sum(abs(self.cg))/nrkc, sum(abs(self.cr))/nrkc, sum(abs(self.cb))/nrkc
             #normalize st and ca with eachother
 #            size=sum(abs(self.st))/nrs
 #            self.st/=size

@@ -98,10 +98,10 @@ def main():
     print len(ikc.keys())
 #    for kc in kcs.keys():
 #        print kc
-    filehandle= open ("datatest","wb")
+    filehandle= open ("datatest.rdata","wb")
     pickle.dump(data,filehandle)
     filehandle.close()
-    filehandle= open ("ikc","wb")
+    filehandle= open ("ikc.ikc","wb")
     pickle.dump(ikc,filehandle)
     filehandle.close()
 

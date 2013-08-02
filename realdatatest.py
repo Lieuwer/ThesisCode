@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 import modelFitter
 import cPickle as pickle
+import time
 
 def main():
     #number of students; number of questions; number of components, gotten from
     #dataprepper. Need to adapt to automate
-    filehandle=open ("datatest","rb")
+    filehandle=open ("datatest.rdata","rb")
     data=pickle.load(filehandle)
-    filehandle=open ("ikc","rb")
+    filehandle=open ("ikc.ikc","rb")
     ikc=pickle.load(filehandle)
     nrs = 574
     nrq = 210710
@@ -26,4 +27,7 @@ def main():
 #            testerror+=model.predict(d[0],d[1])
 #    print "Fitted model error on testset", testerror/len(data.testdata)
 if __name__ == "__main__":
+    t0=time.clock()
     main()
+    t1=time.clock()
+    print t1-t0

@@ -114,7 +114,7 @@ class dataGenerator:
             self.testerror+=(1/(1+m.exp(-x)))
             for kc in self.ikc[q]:
                 kcf[kc]+=1
-        print totc,totf
+        #print totc,totf
 
 
     def save(self, filename):
