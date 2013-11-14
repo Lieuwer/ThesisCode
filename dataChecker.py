@@ -32,7 +32,11 @@ def main():
     sid={}
     data=[]
     labels=[]
+    rawkcitem={}
+    total=0
+    error=0
     for line in f:
+        total+=1
         parts=line.split('\t')
         addkc=False
         if not sid.has_key(parts[1]):
@@ -55,7 +59,7 @@ def main():
         
         kccount=0
         if addkc:
-            
+            rawkcitem[items[parts[3]][parts[5]]]=(parts[17],parts[0])
             for kcp in parts[17].split('~~'):
                 kccount+=1
                 if kcp.find(";")>=0:
@@ -71,6 +75,7 @@ def main():
             kcq[kccount]+=1
         else:
             for kcp in parts[17].split('~~'):
+                kccount+=1
                 if kcp.find(";")>=0:
                     kc = kcp[12:kcp.index(";")]
                 else:
@@ -79,11 +84,17 @@ def main():
                     continue
                 if not kcsmap.has_key(kc):
                     kcsmap[kc]=len(kcs)
+                    #print "warning kc that should be found is not found!", kc
                 if not kcsmap[kc] in ikc[items[parts[3]][parts[5]]]:
                     #print "Kc NF!", kc
                     #print rawkcitem[items[parts[3]][parts[5]]]
-                    ikc[items[parts[3]][parts[5]]].append(kcsmap[kc])                    
+                    error+=1
+                    ikc[items[parts[3]][parts[5]]].append(kcsmap[kc])
+                    
                     kcs[kc]+=1
+                #
+                kcs[kc]+=1
+            
         data.append((sid[parts[1]],items[parts[3]][parts[5]]))
         labels.append(int(parts[13]))
     print "number of items: ", icounter
@@ -93,19 +104,11 @@ def main():
     print "#kcs #items"
     for k,v in kcq.iteritems():
         print k,v
-    
-    kcq=defaultdict(int)
-    for l in ikc.values():
-        kcq[len(l)]+=1
-    print "#kcs #items after taking things into account"
-    print "number of items", len(ikc.keys())
-    for k,v in kcq.iteritems():
-        print k,v
+    print len(ikc.keys())
 #    for kc in kcs.keys():
 #        print kc
-    datafile=edata()
-    datafile.initialize(ikc, len(sid),len(kcsmap),data,labels)
-    datafile.save("train.edata")    
+
+    
     
     f = open(testfile, 'r')
     # get rid of headers
@@ -117,7 +120,7 @@ def main():
     for line in f:
         parts=line.split('\t')
         if not sid.has_key(parts[1]):
-            print "Warning: student not seen", parts[1]
+            print "Warning: student not seen"
             skipcount+=1
             continue
         if steps.has_key(parts[3]):
@@ -151,9 +154,9 @@ def main():
         data.append((sid[parts[1]],items[parts[3]][parts[5]]))
         labels.append(int(parts[13]))
     print "Number of records: ", len(data) ," records skipped: " ,skipcount
-    testdata=edata()    
-    testdata.initialize(ikc, len(sid),len(kcsmap),data,labels)
-    testdata.save("test.edata")        
+
+    print float(error)/total
+        
             
 if __name__ == '__main__':
     main()
