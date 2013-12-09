@@ -6,8 +6,8 @@ question appears.
 '''
 from edata import edata
 from collections import defaultdict
-#data=[]
-ikc=defaultdict(list)
+
+
 
 
 def main():
@@ -23,6 +23,7 @@ def main():
     #First line has the headers
     line=f.readline()
     #ikc links question # to KC #
+    ikc=[]
     icounter=0
     #kcsmap maps a written kc to a unique number
     kcsmap={}
@@ -35,6 +36,7 @@ def main():
     for line in f:
         parts=line.split('\t')
         addkc=False
+        if len(parts[17])<3: continue
         if not sid.has_key(parts[1]):
             sid[parts[1]]=len(sid)
         if steps.has_key(parts[3]):
@@ -55,19 +57,24 @@ def main():
         
         kccount=0
         if addkc:
-            
+            kclist=[]
             for kcp in parts[17].split('~~'):
-                kccount+=1
+                
                 if kcp.find(";")>=0:
                     kc = kcp[12:kcp.index(";")]
                 else:
                     kc=kcp
                 if kc=="":
                     continue
+                kccount+=1
                 if not kcsmap.has_key(kc):
                     kcsmap[kc]=len(kcs)
-                ikc[items[parts[3]][parts[5]]].append(kcsmap[kc])
+                kclist.append(kcsmap[kc])
                 kcs[kc]+=1
+#            if len(kclist)==0:
+#                print "wtf", line
+#                exit()
+            ikc.append(kclist)
             kcq[kccount]+=1
         else:
             for kcp in parts[17].split('~~'):
@@ -95,10 +102,10 @@ def main():
         print k,v
     
     kcq=defaultdict(int)
-    for l in ikc.values():
+    for l in ikc:
         kcq[len(l)]+=1
     print "#kcs #items after taking things into account"
-    print "number of items", len(ikc.keys())
+    print "number of items", len(ikc)
     for k,v in kcq.iteritems():
         print k,v
 #    for kc in kcs.keys():
@@ -137,23 +144,29 @@ def main():
             icounter+=1
         kccount=0
         if addkc:
+            kclist=[]
             for kcp in parts[17].split('~~'):
-                kccount+=1
+                
                 if kcp.find(";")>=0:
                     kc = kcp[12:kcp.index(";")]
                 else:
                     kc=kcp
+                if kc=="":
+                    continue
+                kccount+=1
                 if not kcsmap.has_key(kc):
                     kcsmap[kc]=len(kcs)
-                ikc[items[parts[3]][parts[5]]].append(kcsmap[kc])
+                kclist.append(kcsmap[kc])
                 kcs[kc]+=1
+            ikc.append(ikc)
             kcq[kccount]+=1
         data.append((sid[parts[1]],items[parts[3]][parts[5]]))
         labels.append(int(parts[13]))
     print "Number of records: ", len(data) ," records skipped: " ,skipcount
     testdata=edata()    
     testdata.initialize(ikc, len(sid),len(kcsmap),data,labels)
-    testdata.save("test.edata")        
+    testdata.save("test.edata")
+
             
 if __name__ == '__main__':
     main()

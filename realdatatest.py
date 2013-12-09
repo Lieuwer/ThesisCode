@@ -29,6 +29,7 @@ def main():
     print "Fitted model error on testset", testerror/len(data)
     print "Base model error on testset", baseerror/len(data)
     model.save("real.cmodel")
+    
 if __name__ == "__main__":
     t0=time.clock()
     main()

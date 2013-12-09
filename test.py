@@ -7,6 +7,7 @@ import random as r
 from baseline import baseline
 
 
+import matplotlib.pyplot as plt
 #Get some commandline stuff?
 
 
@@ -34,6 +35,7 @@ def compareparameters(pars1, pars2):
     print np.average(difa), np.average(difb), np.average(difg), np.average(difr), np.average(dift), np.average(dife)
 
 def compareParams(models):
+    return()
     #make sure all models are normalized!
     par=models[0].giveParams()
     params=[]
@@ -57,8 +59,45 @@ def main():
     nrs = 100
     nri = 300
     nrkc = 15
+    #average number of questions per student:
+    qavg=120
     #nr of runs/models to be made
-    nrm =10
+    nrm =[5,10,20,40,80,160]
+    results=[]
+    for n in nrm:
+        print "busy"
+        results.append(runtests(nrs,nri,nrkc,qavg,n))
+#    results=[[ 0.7452381, 0.82857143  ,0.33525848 ,0.05208333, 0.74420388, 0.30348135],[ 0.6611039   ,0.78383117,  0.25821469, -0.00554006 , 0.72587477,  0.31196007],[ 0.74664966  ,0.88564626 , 0.12142106  ,0.15964661  ,0.79418181 , 0.35329201],[ 0.78304878 , 0.93614547  ,0.27912602 , 0.09050584,  0.86693033  ,0.38202623],[ 0.84163029,  0.93798832  ,0.24373561,  0.06769448,  0.86349338,  0.30427406],[ 0.80154697,  0.95238437,  0.0343433,   0.10796303,  0.78064365,  0.1476567 ]]
+    ca=[]
+    cb=[]
+    cg=[]
+    cr=[]
+    st=[]
+    se=[]
+    for result in results:
+        ca.append(result[0])
+        cb.append(result[1])
+        cg.append(result[2])
+        cr.append(result[3])
+        st.append(result[4])
+        se.append(result[5])
+        print result
+    plt.figure(1)
+    p1,=plt.plot(nrm,ca,"b-", label="alpha")
+    p2,=plt.plot(nrm,cb,"g-", label="beta")
+    p3,=plt.plot(nrm,cg,"r-", label="gamma")
+    p4,=plt.plot(nrm,cr,"c-", label="ro")
+    p5,=plt.plot(nrm,st,"m-", label="theta0")
+    p6,=plt.plot(nrm,se,"k-", label="eta")
+    lines=[p1,p2,p3,p4,p5,p6]
+    plt.ylabel('Average spearman')
+    plt.xlabel("Questions per student")
+    plt.legend(lines, ["alpha","beta","gamme","ro","theta0","eta"])
+    plt.show()
+    
+    
+    
+def runtests(nrs,nri,nrkc,qavg,nrm):
     # Create the data objects and have it generate a kc to item distribution    
     data = edata()
     testdata=edata()
@@ -70,14 +109,14 @@ def main():
     ertrainlist=[]
     ertestlist=[]
     modellist=[]
-    distanceMatrix=np.zeros((nrm,nrm))
+
     #Now create data for every student, returning questions vs no questions are 
     #seen twice!
     #questions seen per student
     sq=[]
     for s in range(nrs):
         #Number of questions answered by student,
-        nrans=r.normalvariate(30,5)
+        nrans=r.normalvariate(qavg,5)
         if nrans<1:
             sq.append(1)    
         else:
@@ -125,7 +164,13 @@ def main():
         model.normalizeParameters()
         modellist.append(model)
     compareParams(modellist)
-    
+    tSpearman=np.zeros(6)
+    for nr,model in enumerate(modellist):
+        for i in range (nr):
+            tSpearman+=model.spearman(modellist[i])
+    #print "alpha, beta, gamma, ro, t0, eta"
+    return tSpearman/(nrm/2*(nrm+1))
+            
     
 if __name__ == "__main__":
     t0=time.time()

@@ -5,7 +5,7 @@ import numpy as np
 import scipy.sparse as sparsesp
 from sklearn import linear_model
 import cPickle as pickle
-
+import scipy.stats as stat
 
 class complexModel:
     def save(self, filename):
@@ -107,6 +107,16 @@ class complexModel:
     
     def giveParams(self):
         return (self.ca, self.cb, self.cg, self.cr,self.st,self.se)
+        
+    def spearman(self, other):
+        answerlist=np.zeros(6)
+        answerlist[0]=stat.spearmanr(self.ca,other.ca)[0]
+        answerlist[1]=stat.spearmanr(self.cb,other.cb)[0]
+        answerlist[2]=stat.spearmanr(self.cg,other.cg)[0]
+        answerlist[3]=stat.spearmanr(self.cr,other.cr)[0]
+        answerlist[4]=stat.spearmanr(self.st,other.st)[0]
+        answerlist[5]=stat.spearmanr(self.se,other.se)[0]
+        return answerlist
     #
     # Methods for the fitting procedure
     #
@@ -223,7 +233,7 @@ class complexModel:
             else:
                 noimprov=0
             if noimprov>1:
-                print "Improvement threshold reached at 1 iteration", i
+                #print "Improvement threshold reached at 1 iteration", i
                 break
             
             #Now estimate the kc parameters
@@ -241,7 +251,7 @@ class complexModel:
             else:
                 noimprov=0
             if noimprov>1:
-                print "Improvement threshold reached at 2 iteration", i
+                #print "Improvement threshold reached at 2 iteration", i
                 break
         return self.fitError[-1]
         

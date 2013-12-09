@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import cPickle as pickle
 import random as r
+from collections import defaultdict
 
 #Go from a cumulative distribution list to determine what kc's are
 #linked to what item
@@ -77,10 +78,103 @@ class edata:
         
     def clearData(self):
         self.data=[]
-        self.labels=[]        
+        self.labels=[]
+
+    def countStudentQuestions(self):
+        s=defaultdict(int)
+        for d in self.data:
+            s[d[0]]+=1
+        return s
+    
+    def countKCQuestions(self):
+        s=defaultdict(int)
+        for d in self.data:
+            for kc in self.ikc[d[1]]:
+                s[kc]+=1
+        return s
+        
+    def removesq(self,nr):
+        #Remove all students that answered less then nr questions
+        sq=self.countStudentQuestions()
+        removeS=[]
+        for s,q in sq.iteritems():
+            if q<nr:
+                removeS.append(s)
+        print len(removeS),len(sq)
+        newData=[]
+        for d in self.data:
+            if d[0] not in removeS:
+                newData.append(d)
+        self.data=newData
+    
+    def removekcq(self,nr):
+        doIteration=True
+        kcq=self.countKCQuestions()
+        oldlen=0
+        while(len(kcq)!=oldlen):
+            oldlen=len(kcq)
+            removeKC=[]
+            removei=[]
+            for kc,q in kcq.iteritems():
+                if q<nr:
+                    removeKC.append(kc)
+            print len(removeKC),len(kcq)
+            for i in range(len(self.ikc)):
+                for kc in removeKC:
+                    if kc in self.ikc[i]:
+                        self.ikc[i].remove(kc)
+                if len(self.ikc[i])==0:
+                    removei.append(i)
+            if doIteration:
+                newData=[]
+                for d in self.data:
+                    if d[1] not in removei:
+                        newData.append(d)
+                self.data=newData
+            kcq=self.countKCQuestions()    
+
+    def refactor(self):
+        #Remove items and students by shifting the numbers.
+        items=[0]*len(self.ikc)
+        kc=self.countKCQuestions()
+        s=self.countStudentQuestions()
+        for d in self.data():
+            items[d[1]]+=1
+        jump=0
+        for i in range(len(items)):
+            if items[i]==0:
+                jump+=1
+            else:
+                items[i]=i-jump
+                self.ikc[i]=ikc[i-jump]
+        for i in range(jumps):
+            self.ikc.del(-1)
+        jump=0
+        for i in range(len(kc.values)):
+            if kc[i]==0:
+                jump+=1
+            else:
+                kc[i]=i-jump
+        
+        jump=0
+        for i in range(len(s.values)):
+            if s[i]==0:
+                jump+=1
+            else:
+                s[i]=i-jump
+            
+        
+                
+       
+    def removekcsq(self,nrk,nrs):
+        oldlen=0
+        while (oldlen!=len(self.data)):
+            oldlen=len(self.data)
+            self.removesq(nrs)
+            self.removekcq(nrk)
+        
+            
+            
         
 
         
-
-    
-    
