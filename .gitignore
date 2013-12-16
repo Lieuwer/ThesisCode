@@ -36,6 +36,8 @@ nosetests.xml
 
 #extra
 *.png
-*.data
 *.edata
-*.ikc
+*.cmodel
+*.pfamodel
+*.eirtmodel
+*.lfamodel

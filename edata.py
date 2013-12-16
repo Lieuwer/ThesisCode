@@ -93,79 +93,101 @@ class edata:
                 s[kc]+=1
         return s
         
+    def countItemQuestions(self):
+        s=defaultdict(int)
+        for d in self.data:
+            s[d[1]]+=1
+        return s
+        
     def removesq(self,nr):
         #Remove all students that answered less then nr questions
         sq=self.countStudentQuestions()
         removeS=[]
-        for s,q in sq.iteritems():
-            if q<nr:
-                removeS.append(s)
+        
+        jump=0
+        for i in range(len(sq)):
+            if sq[i]<nr:
+                removeS.append(sq[i])
+                jump+=1
+            else:
+                sq[i]=i-jump
         print len(removeS),len(sq)
         newData=[]
+        newLabels=[]
+        #enumerate leads to problems
+        i=0
         for d in self.data:
             if d[0] not in removeS:
-                newData.append(d)
+                newData.append((sq[d[0]],d[1]))
+                newLabels.append(self.labels[i])    
+            i+=1
         self.data=newData
+        self.labels=newLabels
+        self.updateItemMap()
+        
     
     def removekcq(self,nr):
-        doIteration=True
+        updateData=False
         kcq=self.countKCQuestions()
-        oldlen=0
-        while(len(kcq)!=oldlen):
-            oldlen=len(kcq)
-            removeKC=[]
-            removei=[]
-            for kc,q in kcq.iteritems():
-                if q<nr:
-                    removeKC.append(kc)
-            print len(removeKC),len(kcq)
-            for i in range(len(self.ikc)):
-                for kc in removeKC:
-                    if kc in self.ikc[i]:
-                        self.ikc[i].remove(kc)
-                if len(self.ikc[i])==0:
-                    removei.append(i)
-            if doIteration:
-                newData=[]
-                for d in self.data:
-                    if d[1] not in removei:
-                        newData.append(d)
-                self.data=newData
-            kcq=self.countKCQuestions()    
+        removeKC=[]
+        removei=[]
+        
+        jump=0
+        for i in range(len(kcq)):
+            if kcq[i]<nr:
+                jump+=1
+                removeKC.append(kcq)
+                kcq[i]=-1
+            else:
+                kcq[i]=i-jump
+        print len(removeKC),len(kcq)
+        for i in range(len(self.ikc)):
+            for kc in removeKC:
+                if kc in self.ikc[i]:
+                    self.ikc[i].remove(kc)
+            if len(self.ikc[i])==0:
+                removei.append(i)
+                updateData=True
+            for j in range(len(self.ikc[i])):
+                self.ikc[i][j]=kcq[self.ikc[i][j]]
 
-    def refactor(self):
-        #Remove items and students by shifting the numbers.
-        items=[0]*len(self.ikc)
-        kc=self.countKCQuestions()
-        s=self.countStudentQuestions()
-        for d in self.data():
-            items[d[1]]+=1
+        if updateData:
+            newData=[]
+            newLabels=[]
+            #enumerate leads to error, so...
+            i=0
+            for d in self.data:
+                if d[1] not in removei:
+                    newData.append(d)
+                    newLabels.append(self.labels[i])
+                i+=1
+            self.data=newData
+            self.labels=newLabels
+            self.updataItemMap()
+               
+
+    def updateItemMap(self):
+        it=self.countItemQuestions()
         jump=0
-        for i in range(len(items)):
-            if items[i]==0:
+        for i in range(len(self.ikc)):
+            if it[i]==0:
                 jump+=1
             else:
-                items[i]=i-jump
-                self.ikc[i]=ikc[i-jump]
-        for i in range(jumps):
-            self.ikc.del(-1)
-        jump=0
-        for i in range(len(kc.values)):
-            if kc[i]==0:
-                jump+=1
-            else:
-                kc[i]=i-jump
-        
-        jump=0
-        for i in range(len(s.values)):
-            if s[i]==0:
-                jump+=1
-            else:
-                s[i]=i-jump
-            
-        
-                
-       
+                it[i]=i-jump
+                self.ikc[i-jump]=self.ikc[i]
+        for i in range(jump):
+            self.ikc.pop(-1)
+        newData=[]
+        newLabels=[]
+        #enumerate leads to problems
+        i=0
+        for d in self.data:
+            newData.append((d[0],it[d[1]]))
+            newLabels.append(self.labels[i])    
+            i+=1
+        self.data=newData
+        self.labels=newLabels
+
     def removekcsq(self,nrk,nrs):
         oldlen=0
         while (oldlen!=len(self.data)):
@@ -173,6 +195,29 @@ class edata:
             self.removesq(nrs)
             self.removekcq(nrk)
         
+        maxkc=0
+        maxs=0
+        maxi=0
+        minkc=10
+        for d in self.data:
+            if d[0]>maxs: maxs=d[0]
+            if d[1]>maxi: maxi=d[1]
+            if len(self.ikc[d[1]])<minkc: minkc=len(self.ikc[d[1]])
+            if max(self.ikc[d[1]])>maxkc:maxkc=max(self.ikc[d[1]])
+        print maxs, maxi, maxkc, minkc
+            
+    def splitDataS(self,parts):
+        sets=[]
+        for i in range(parts):
+            sets.append(edata())
+            sets[i].initializeCopy(self)
+        for i in range(len(self.data)):
+            sets[i%parts].data.append(self.data[i])
+        for i in range(parts):
+            kc=sets[i].countKCQuestions()
+            print len(kc)
+            
+        return sets
             
             
         

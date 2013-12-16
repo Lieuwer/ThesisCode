@@ -25,6 +25,7 @@ def main():
     test.removekcsq(3,15)
 
     print len(test.data)
+    datas=test.splitDataS(3)
     
 if __name__ == "__main__":
     t0=time.time()
