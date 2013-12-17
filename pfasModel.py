@@ -256,3 +256,13 @@ class complexModel:
         self.se/=avge
         self.cr*=avge
         self.cg*=avge
+        
+    def useTestset(self,testdata):
+        error=0
+        for d in testdata.giveData():
+            p=self.predict(d[0],d[1])
+            if d[2]:
+                error+=1-p
+            else:
+                error+=p
+        return error/len(testdata)

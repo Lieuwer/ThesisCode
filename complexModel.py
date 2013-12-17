@@ -19,8 +19,10 @@ class complexModel:
         return pickle.load(filehandle)
 
     def __init__(self,data,fullmatrix=True):
+        #debug option
+        self.debug=True
         #fullmatrix is a lot faster, but takes more memory and can thus simply
-        #be infeasable        
+        #be infeasable
         self.fullmatrix=fullmatrix        
         #store the kc's belonging to each item
         self.ikc=data.ikc
@@ -31,6 +33,9 @@ class complexModel:
         self.cb=np.zeros(data.nrkc)
         self.st=np.zeros(data.nrs)
         self.se=np.zeros(data.nrs)
+        
+        self.basekcc=np.zeros((data.nrs,data.nrkc))
+        self.basekcf=np.zeros((data.nrs,data.nrkc))        
         
         self.kcc=np.zeros((data.nrs,data.nrkc))
         self.kcf=np.zeros((data.nrs,data.nrkc))
@@ -78,15 +83,28 @@ class complexModel:
     def clearGenerate(self):
         #clear the data and reset the generator to the moment when no data is made yet
         self.data.clearData()
-        self.kcc=np.zeros((self.data.nrs,self.data.nrkc))
-        self.kcf=np.zeros((self.data.nrs,self.data.nrkc))
-        
+        self.kcc=self.basekcc.copy()
+        self.kcf=self.basekcf.copy()
+    
+    def setBaseKCCF(self,other):
+        self.basekcc=other.kcc.copy()
+        self.basekcf=other.kcf.copy()
+        self.kcc=self.basekcc.copy()
+        self.kcf=self.basekcf.copy()
+    
     def predict(self,s,i):
         k=float(len(self.ikc[i]))
         x=0
         for c in self.ikc[i]:
             x+=self.ca[c]*self.st[s]/k+(self.kcf[s,c]*self.cr[c]+self.kcc[s,c]*self.cg[c])*self.se[s]-self.cb[c]
-        return 1/(m.exp(-x)+1)
+        p=1/(m.exp(-x)+1)
+        if p<.5:
+            for c in self.ikc[i]:
+                self.kcf+=1
+        else:
+            for c in self.ikc[i]:
+                self.kcc+=1        
+        return p
         
     def generate(self,s,i):
         p = self.predict(s,i)
@@ -94,13 +112,10 @@ class complexModel:
         if r.random()<p:
             self.data.labels.append(1)
             self.genError+=(1-p)
-            for kc in self.ikc[i]:
-                self.kcc[s,kc]+=1
+
         else:
             self.data.labels.append(0)
             self.genError+=p
-            for kc in self.ikc[i]:
-                self.kcf[s,kc]+=1
      
     def giveGenError(self):
         return self.genError/len(self.data.data)
@@ -121,6 +136,8 @@ class complexModel:
     # Methods for the fitting procedure
     #
     def sUpdate(self):
+        if self.debug:
+            print "Starting student update"
         #Do a single fitting of the student parameters and update them
         nrs=len(self.st)
         nrkc=len(self.ca)
@@ -131,8 +148,8 @@ class complexModel:
         else:
             studentdata=sparsesp.lil_matrix((len(self.data.data),nrs*2+nrkc))
         #keep track of questions answered correctly and questions answered wrongly
-        kcc = self.kcc= np.zeros((nrs,nrkc))
-        kcf = self.kcf= np.zeros((nrs,nrkc))
+        kcc = self.kcc= self.basekcc.copy()
+        kcf = self.kcf= self.basekcf.copy()
         totalerror=0.0
         for nr,d in enumerate(self.data.giveData()):
             
@@ -171,6 +188,8 @@ class complexModel:
         return totalerror/len(self.data.data)
 
     def kcUpdate(self):
+        if self.debug:
+            print "Starting kc update"
         nrs=len(self.st)
         nrkc=len(self.ca)
         labels=self.data.labels
@@ -228,7 +247,7 @@ class complexModel:
             self.fitError.append(self.sUpdate())
             #print self.fitError[-1]
             
-            if self.fitError[-3]-self.fitError[-1]<.001:
+            if self.fitError[-3]-self.fitError[-1]<.01:
                 noimprov+=1
             else:
                 noimprov=0
@@ -246,7 +265,7 @@ class complexModel:
             
             self.fitError.append(self.kcUpdate())
             #print self.fitError[-1]
-            if self.fitError[-3]-self.fitError[-1]<.001:
+            if self.fitError[-3]-self.fitError[-1]<.01:
                 noimprov+=1
             else:
                 noimprov=0
@@ -258,12 +277,24 @@ class complexModel:
     def normalizeParameters(self):
         #make the average of alpha equal to 1 and the average of eta equal to .05
         avga=np.mean(self.ca)
-        self.ca/=avga
-        self.st*=avga
-        avge=np.mean(self.se)*20
-        self.se/=avge
-        self.cr*=avge
-        self.cg*=avge
+        if avga!=0:
+            self.ca/=avga
+            self.st*=avga
+        avge=np.mean(self.se*20)
+        if avge !=0:
+            self.se/=avge
+            self.cr*=avge
+            self.cg*=avge
+        
+    def useTestset(self,testdata):
+        error=0
+        for d in testdata.giveData():
+            p=self.predict(d[0],d[1])
+            if d[2]:
+                error+=1-p
+            else:
+                error+=p
+        return error/len(testdata)
 #        plt.figure(1)
 #        plt.plot(erlist)
 #        plt.ylabel('error')

@@ -14,6 +14,26 @@ def distribution(plist):
     return len(plist)+1
 
 class edata:
+    def checkdata(self):
+        maxs=0
+        for i in range(len(self.data)):
+            if self.data[i][0]>maxs: 
+                maxs=self.data[i][0]
+            elif self.data[i][0]<maxs:
+                print "Help, current student is lower than highest seen"
+                print self.data[i][0],maxs               
+                i=q
+        sq=self.countStudentQuestions()
+        
+        dc=0
+        for i in range(max(sq.keys())+1):
+            for j in range(sq[i]):
+                if self.data[dc][0]!=i:
+                    print self.data[dc][0],i
+                    
+                dc+=1
+        print max(sq.keys()), maxs
+            
     def save(self, filename):
         filehandle= open (filename,"wb")
         pickle.dump(self,filehandle)
@@ -38,7 +58,12 @@ class edata:
     def giveData(self):
         i=0
         while i<len(self.data):
-            yield (self.data[i][0],self.data[i][1],self.labels[i])
+            try:
+                yield (self.data[i][0],self.data[i][1],self.labels[i])
+            except:
+                print "something wrong!"
+                print self.data[i]
+                print self.labels[i]
             i+=1
 
     def generate(self,nrs,nrkc,nri):
@@ -103,26 +128,28 @@ class edata:
         #Remove all students that answered less then nr questions
         sq=self.countStudentQuestions()
         removeS=[]
+        smap={}
         
         jump=0
-        for i in range(len(sq)):
+        for i in range(max(sq.keys())+1):
             if sq[i]<nr:
-                removeS.append(sq[i])
+                if not sq[i]==0:
+                    removeS.append(i)
                 jump+=1
             else:
-                sq[i]=i-jump
-        print len(removeS),len(sq)
+                smap[i]=i-jump
+        print len(removeS),len(sq),max(sq.keys())
         newData=[]
         newLabels=[]
         #enumerate leads to problems
-        i=0
-        for d in self.data:
+        for i in range(len(self.data)):
+            d=self.data[i]
             if d[0] not in removeS:
-                newData.append((sq[d[0]],d[1]))
-                newLabels.append(self.labels[i])    
-            i+=1
+                newData.append((smap[d[0]],d[1]))
+                newLabels.append(self.labels[i])
         self.data=newData
         self.labels=newLabels
+        self.nrs=max(sq.keys())+1-jump
         self.updateItemMap()
         
     
@@ -131,16 +158,16 @@ class edata:
         kcq=self.countKCQuestions()
         removeKC=[]
         removei=[]
-        
+        kcmap={}
         jump=0
-        for i in range(len(kcq)):
+        for i in range(max(kcq.keys())+1):
             if kcq[i]<nr:
                 jump+=1
-                removeKC.append(kcq)
-                kcq[i]=-1
+                if not kcq[i]==0:
+                    removeKC.append(i)
             else:
-                kcq[i]=i-jump
-        print len(removeKC),len(kcq)
+                kcmap[i]=i-jump
+        print len(removeKC),max(kcq.keys())
         for i in range(len(self.ikc)):
             for kc in removeKC:
                 if kc in self.ikc[i]:
@@ -149,7 +176,9 @@ class edata:
                 removei.append(i)
                 updateData=True
             for j in range(len(self.ikc[i])):
-                self.ikc[i][j]=kcq[self.ikc[i][j]]
+                self.ikc[i][j]=kcmap[self.ikc[i][j]]
+        print self.nrkc,len(removeKC)
+        self.nrkc=max(kcq.keys())+1-jump
 
         if updateData:
             newData=[]
@@ -163,12 +192,13 @@ class edata:
                 i+=1
             self.data=newData
             self.labels=newLabels
-            self.updataItemMap()
+            self.updateItemMap()
                
 
     def updateItemMap(self):
         it=self.countItemQuestions()
         jump=0
+        
         for i in range(len(self.ikc)):
             if it[i]==0:
                 jump+=1
@@ -180,11 +210,11 @@ class edata:
         newData=[]
         newLabels=[]
         #enumerate leads to problems
-        i=0
-        for d in self.data:
+        
+        for i in range(len(self.data)):
+            d=self.data[i]
             newData.append((d[0],it[d[1]]))
             newLabels.append(self.labels[i])    
-            i+=1
         self.data=newData
         self.labels=newLabels
 
@@ -204,19 +234,37 @@ class edata:
             if d[1]>maxi: maxi=d[1]
             if len(self.ikc[d[1]])<minkc: minkc=len(self.ikc[d[1]])
             if max(self.ikc[d[1]])>maxkc:maxkc=max(self.ikc[d[1]])
-        print maxs, maxi, maxkc, minkc
+        print maxs, maxi, maxkc, minkc, self.nrs, self.nrkc
             
     def splitDataS(self,parts):
         sets=[]
         for i in range(parts):
             sets.append(edata())
             sets[i].initializeCopy(self)
-        for i in range(len(self.data)):
-            sets[i%parts].data.append(self.data[i])
+        sq=self.countStudentQuestions()
+        print "checking:",sum(sq.values()),len(self.data)
+        skip=0
+        dCounter=0
+        for i in range(max(sq.keys())+1):
+            perS=sq[i]/parts
+            rest=sq[i]%parts
+            for j in range(parts):
+                if j<rest: extra=1
+                else: extra = 0
+                for k in range(perS+extra):
+                    sets[(j+skip)%parts].data.append(self.data[dCounter])
+                    sets[(j+skip)%parts].labels.append(self.labels[dCounter])
+                    
+                    
+                    if self.data[dCounter][0] != i:
+                        print i,self.data[dCounter][0]
+                        print "Student being processed and in data don't match!"
+                        i=q
+                    dCounter+=1
+            skip=(skip+rest)%parts
         for i in range(parts):
             kc=sets[i].countKCQuestions()
-            print len(kc)
-            
+            print max(kc), len(kc),self.nrkc, len(self.data)            
         return sets
             
             

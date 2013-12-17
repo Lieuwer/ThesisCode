@@ -59,14 +59,15 @@ def main():
     nrs = 100
     nri = 300
     nrkc = 15
+    runs=10
     #average number of questions per student:
-    qavg=120
+    qslist =[5,10,20,40,80,160]
     #nr of runs/models to be made
-    nrm =[5,10,20,40,80,160]
+    
     results=[]
-    for n in nrm:
+    for qs in qslist:
         print "busy"
-        results.append(runtests(nrs,nri,nrkc,qavg,n))
+        results.append(runtests(nrs,nri,nrkc,qs,runs))
 #    results=[[ 0.7452381, 0.82857143  ,0.33525848 ,0.05208333, 0.74420388, 0.30348135],[ 0.6611039   ,0.78383117,  0.25821469, -0.00554006 , 0.72587477,  0.31196007],[ 0.74664966  ,0.88564626 , 0.12142106  ,0.15964661  ,0.79418181 , 0.35329201],[ 0.78304878 , 0.93614547  ,0.27912602 , 0.09050584,  0.86693033  ,0.38202623],[ 0.84163029,  0.93798832  ,0.24373561,  0.06769448,  0.86349338,  0.30427406],[ 0.80154697,  0.95238437,  0.0343433,   0.10796303,  0.78064365,  0.1476567 ]]
     ca=[]
     cb=[]
@@ -81,14 +82,13 @@ def main():
         cr.append(result[3])
         st.append(result[4])
         se.append(result[5])
-        print result
     plt.figure(1)
-    p1,=plt.plot(nrm,ca,"b-", label="alpha")
-    p2,=plt.plot(nrm,cb,"g-", label="beta")
-    p3,=plt.plot(nrm,cg,"r-", label="gamma")
-    p4,=plt.plot(nrm,cr,"c-", label="ro")
-    p5,=plt.plot(nrm,st,"m-", label="theta0")
-    p6,=plt.plot(nrm,se,"k-", label="eta")
+    p1,=plt.plot(qslist,ca,"b-", label="alpha")
+    p2,=plt.plot(qslist,cb,"g-", label="beta")
+    p3,=plt.plot(qslist,cg,"r-", label="gamma")
+    p4,=plt.plot(qslist,cr,"c-", label="ro")
+    p5,=plt.plot(qslist,st,"m-", label="theta0")
+    p6,=plt.plot(qslist,se,"k-", label="eta")
     lines=[p1,p2,p3,p4,p5,p6]
     plt.ylabel('Average spearman')
     plt.xlabel("Questions per student")
@@ -150,24 +150,24 @@ def runtests(nrs,nri,nrkc,qavg,nrm):
         model=complexModel(data,True)
         err = model.fit()
         ertrainlist.append(err)
-        ertestlist.append(0)
-        for d in testdata.giveData():
-            p=model.predict(d[0],d[1])
-            if d[2]:
-                ertestlist[i]+=1-p
-            else:
-                ertestlist[i]+=p
-        ertestlist[i]=ertestlist[i]/len(testdata)
+        
+        ertestlist.append(model.useTestset(testdata))
+
+        
         for other in modellist:
             #build the similarity matrix here
-            i=1
+            j=1
         model.normalizeParameters()
         modellist.append(model)
     compareParams(modellist)
+    rSpearman=np.zeros(6)    
+    for model in modellist:
+        rSpearman+=model.spearman(genmodel)
+    return rSpearman/nrm
     tSpearman=np.zeros(6)
     for nr,model in enumerate(modellist):
-        for i in range (nr):
-            tSpearman+=model.spearman(modellist[i])
+        for j in range (nr):
+            tSpearman+=model.spearman(modellist[j])
     #print "alpha, beta, gamma, ro, t0, eta"
     return tSpearman/(nrm/2*(nrm+1))
             
