@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 # Currently the baseline takes the product average of the fraction of how 
-#often the user has seen the corresponding KC's  
-class baseline:
+#often the user has seen the corresponding KC's
+from model import model
+
+class baseline(model):
     def __init__(self,data):
         # Keep track of how many questions containing that kc each student has
         # answered correctly
@@ -35,16 +37,21 @@ class baseline:
     def predict(self,s,it):
         result=1
         for kc in self.ikc[it]:
-            if (self.sc[s][kc]+self.sf[s][kc])>0:
-                result*=float(self.sc[s][kc])/(self.sc[s][kc]+self.sf[s][kc])
-            else:
-                #take care of the problem that sometimes a student hasn't seen a kc yet
-                result*=.1
+            try:
+                if (self.sc[s][kc]+self.sf[s][kc])>0:
+                    result*=float(self.sc[s][kc])/(self.sc[s][kc]+self.sf[s][kc])
+                else:
+                    #take care of the problem that sometimes a student hasn't seen a kc yet
+                    result*=.1
+            except:
+                print it,kc
         if len(self.ikc[it])==0:
             result= .5
         else:
             result=result**(1.0/len(self.ikc[it]))
         return result
+    
+
               
                     
             

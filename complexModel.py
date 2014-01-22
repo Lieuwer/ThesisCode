@@ -4,20 +4,11 @@ import math as m
 import numpy as np
 import scipy.sparse as sparsesp
 from sklearn import linear_model
-import cPickle as pickle
+
 import scipy.stats as stat
+from model import model
 
-class complexModel:
-    def save(self, filename):
-        filehandle= open (filename,"wb")
-        pickle.dump(self,filehandle)
-        filehandle.close()
-        
-    @staticmethod
-    def load(filename):
-        filehandle=open (filename,"rb")
-        return pickle.load(filehandle)
-
+class complexModel(model):
     def __init__(self,data,fullmatrix=True):
         #debug option
         self.debug=True
@@ -74,11 +65,7 @@ class complexModel:
             self.cr[i]=g*r.uniform(.2,.8)
             self.cb[i]=r.normalvariate(0,1.5)
      
-    def changeData(self,newdata):
-        #continue on another dataset, but keep all other info
-        self.genError=0.0
-        self.fitError=[1]
-        self.data=newdata
+
         
     def clearGenerate(self):
         #clear the data and reset the generator to the moment when no data is made yet
@@ -97,7 +84,10 @@ class complexModel:
         x=0
         for c in self.ikc[i]:
             x+=self.ca[c]*self.st[s]/k+(self.kcf[s,c]*self.cr[c]+self.kcc[s,c]*self.cg[c])*self.se[s]-self.cb[c]
-        p=1/(m.exp(-x)+1)
+        try:
+            p=1/(m.exp(-x)+1)
+        except:
+            p=0
         if p<.5:
             for c in self.ikc[i]:
                 self.kcf+=1
@@ -105,20 +95,6 @@ class complexModel:
             for c in self.ikc[i]:
                 self.kcc+=1        
         return p
-        
-    def generate(self,s,i):
-        p = self.predict(s,i)
-        self.data.data.append((s,i))
-        if r.random()<p:
-            self.data.labels.append(1)
-            self.genError+=(1-p)
-
-        else:
-            self.data.labels.append(0)
-            self.genError+=p
-     
-    def giveGenError(self):
-        return self.genError/len(self.data.data)
     
     def giveParams(self):
         return (self.ca, self.cb, self.cg, self.cr,self.st,self.se)
@@ -286,15 +262,7 @@ class complexModel:
             self.cr*=avge
             self.cg*=avge
         
-    def useTestset(self,testdata):
-        error=0
-        for d in testdata.giveData():
-            p=self.predict(d[0],d[1])
-            if d[2]:
-                error+=1-p
-            else:
-                error+=p
-        return error/len(testdata)
+
 #        plt.figure(1)
 #        plt.plot(erlist)
 #        plt.ylabel('error')

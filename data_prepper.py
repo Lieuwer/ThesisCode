@@ -158,7 +158,7 @@ def main():
                     kcsmap[kc]=len(kcs)
                 kclist.append(kcsmap[kc])
                 kcs[kc]+=1
-            ikc.append(ikc)
+            ikc.append(kclist)
             kcq[kccount]+=1
         data.append((sid[parts[1]],items[parts[3]][parts[5]]))
         labels.append(int(parts[13]))

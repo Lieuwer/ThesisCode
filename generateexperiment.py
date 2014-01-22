@@ -61,13 +61,20 @@ def main():
     nrkc = 15
     runs=10
     #average number of questions per student:
-    qslist =[5,10,20,40,80,160]
+    qslist =[5,10,20,40,80]
     #nr of runs/models to be made
-    
     results=[]
+
+    # Create the data objects and have it generate a kc to item distribution    
+
+    data = edata()
+    data.generate(nrs,nrkc,nri)
+    genmodel=complexModel(data)
+    genmodel.genParams()    
+    
     for qs in qslist:
         print "busy"
-        results.append(runtests(nrs,nri,nrkc,qs,runs))
+        results.append(runtests(data,genmodel,qs,runs))
 #    results=[[ 0.7452381, 0.82857143  ,0.33525848 ,0.05208333, 0.74420388, 0.30348135],[ 0.6611039   ,0.78383117,  0.25821469, -0.00554006 , 0.72587477,  0.31196007],[ 0.74664966  ,0.88564626 , 0.12142106  ,0.15964661  ,0.79418181 , 0.35329201],[ 0.78304878 , 0.93614547  ,0.27912602 , 0.09050584,  0.86693033  ,0.38202623],[ 0.84163029,  0.93798832  ,0.24373561,  0.06769448,  0.86349338,  0.30427406],[ 0.80154697,  0.95238437,  0.0343433,   0.10796303,  0.78064365,  0.1476567 ]]
     ca=[]
     cb=[]
@@ -97,14 +104,10 @@ def main():
     
     
     
-def runtests(nrs,nri,nrkc,qavg,nrm):
-    # Create the data objects and have it generate a kc to item distribution    
-    data = edata()
+def runtests(data,genmodel,qavg,nrm):
     testdata=edata()
-    data.generate(nrs,nrkc,nri)
     testdata.initializeCopy(data)
-    genmodel=complexModel(data)
-    genmodel.genParams()
+    
     ergenlist=[]
     ertrainlist=[]
     ertestlist=[]
@@ -122,7 +125,7 @@ def runtests(nrs,nri,nrkc,qavg,nrm):
         else:
             sq.append(int(nrans))
     
-    #Generate models ten times
+    #Generate models a number of times
     for i in range(nrm):
         genmodel.changeData(data)
         genmodel.clearGenerate()

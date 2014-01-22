@@ -1,37 +1,48 @@
 # -*- coding: utf-8 -*-
-from complexModel import complexModel
-import time
-import datetime
+"""
+Created on Mon Jan 20 12:43:11 2014
+
+@author: Lieuwe
+"""
 from edata import edata
+from complexModel import complexModel
+import time,datetime
 from baseline import baseline
+import numpy as np
+import matplotlib.pyplot as plt
 
 def main():
-    #Load the prepared train data
     data=edata.load("train.edata")
-    #Create a model on the data and fit it to the data
-    model=complexModel(data,False)
-    model.fit()
-    #Also create a baseline model for comparison
-    model2=baseline(data)
-    model2.fit()
+    testdata=edata.load("test.edata")
+##    data.removekcsq(3,15)
+#    testdata=edata.load("test.edata")
+#    
+#    model=complexModel(data, False)
+#    print model.fit()
+#    model.save("trying.cModel")
+##    print model.useTestset(testdata)
+#
+    bl = baseline(data)
+    bl.fit()
+    print "baseline:", bl.useTestset(testdata)
     
-    #see how the model does on testset
-    data=edata.load("test.edata")
-    testerror=0.0
-    baseerror=0.0
-    for d in data.giveData():
-        if d[2]:
-            testerror+=1-model.predict(d[0],d[1])
-            baseerror+=1-model2.predict(d[0],d[1])
-        else:
-            testerror+=model.predict(d[0],d[1])
-            baseerror+=model2.predict(d[0],d[1])
-    print "Fitted model error on testset", testerror/len(data)
-    print "Base model error on testset", baseerror/len(data)
-    model.save("real.cmodel")
+#------------------------------------------------------------------------------
+    
+    model=complexModel.load("trying.cModel")
+    model.normalizeParameters()
+    
+    print "model:", model.useTestset(testdata)
+    print np.average(model.ca), np.std(model.ca)
+    print np.average(model.cr), np.std(model.cr)
+    print np.average(model.cg), np.std(model.cg)
+    print np.average(model.cb), np.std(model.cb)
+    print np.average(model.st), np.std(model.st)
+    print np.average(model.se), np.std(model.se)
+    
+    
     
 if __name__ == "__main__":
-    t0=time.clock()
+    t0=time.time()
     main()
-    t1=time.clock()
+    t1=time.time()
     print "Time taken by all code", str(datetime.timedelta(seconds=(t1-t0)))

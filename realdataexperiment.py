@@ -39,12 +39,13 @@ def main():
             models[i].setBaseKCCF(models[i-1])
         trainerror.append(models[i].fit())
         if i<len(datas)-1:
-            testerror.append(models[i].useTestSet(datas[i+1]))
+            testerror.append(models[i].useTestset(datas[i+1]))
+            print "test done"
         else:
             #set kcc
             models[i].basekcc=models[i-2].basekcc.copy()
             models[i].basekcf=models[i-2].basekcf.copy()
-            testerror.append(models[i].useTestSet(datas[i-1]))
+            testerror.append(models[i].useTestset(datas[i-1]))
     tSpearman=np.zeros(6)
     for nr,model in enumerate(models):
         for i in range (nr):
