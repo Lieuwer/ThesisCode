@@ -5,7 +5,7 @@ import time
 import datetime
 import random as r
 from baseline import baseline
-
+import warnings
 
 import matplotlib.pyplot as plt
 #Get some commandline stuff?
@@ -55,13 +55,15 @@ def compareParams(models):
     
 
 def main():
+    warnings.filterwarnings('error')
     #number of students; number of questions; number of components
     nrs = 100
     nri = 300
     nrkc = 15
-    runs=10
+    runs=5
     #average number of questions per student:
-    qslist =[5,10,20,40,80]
+    #qslist =[5,10,20,40,80]
+    qslist=[5,10,20,40]
     #nr of runs/models to be made
     results=[]
 
@@ -75,31 +77,20 @@ def main():
     for qs in qslist:
         print "busy"
         results.append(runtests(data,genmodel,qs,runs))
-#    results=[[ 0.7452381, 0.82857143  ,0.33525848 ,0.05208333, 0.74420388, 0.30348135],[ 0.6611039   ,0.78383117,  0.25821469, -0.00554006 , 0.72587477,  0.31196007],[ 0.74664966  ,0.88564626 , 0.12142106  ,0.15964661  ,0.79418181 , 0.35329201],[ 0.78304878 , 0.93614547  ,0.27912602 , 0.09050584,  0.86693033  ,0.38202623],[ 0.84163029,  0.93798832  ,0.24373561,  0.06769448,  0.86349338,  0.30427406],[ 0.80154697,  0.95238437,  0.0343433,   0.10796303,  0.78064365,  0.1476567 ]]
-    ca=[]
-    cb=[]
-    cg=[]
-    cr=[]
-    st=[]
-    se=[]
+    params=[]
+    for i in range(genmodel.nrParams()):
+        params.append([])
     for result in results:
-        ca.append(result[0])
-        cb.append(result[1])
-        cg.append(result[2])
-        cr.append(result[3])
-        st.append(result[4])
-        se.append(result[5])
+        for i in range(genmodel.nrParams()):
+            params[i].append(result[i])
     plt.figure(1)
-    p1,=plt.plot(qslist,ca,"b-", label="alpha")
-    p2,=plt.plot(qslist,cb,"g-", label="beta")
-    p3,=plt.plot(qslist,cg,"r-", label="gamma")
-    p4,=plt.plot(qslist,cr,"c-", label="ro")
-    p5,=plt.plot(qslist,st,"m-", label="theta0")
-    p6,=plt.plot(qslist,se,"k-", label="eta")
-    lines=[p1,p2,p3,p4,p5,p6]
+    lines=[0]*genmodel.nrParams()
+    colors=["b-","g-","r-","c-","m-","k-"]
+    for i in range(genmodel.nrParams()):
+        lines[i],=plt.plot(qslist,params[i],colors[i],label=genmodel.paranames[i])
     plt.ylabel('Average spearman')
     plt.xlabel("Questions per student")
-    plt.legend(lines, ["alpha","beta","gamme","ro","theta0","eta"])
+    plt.legend(lines, genmodel.paranames)
     plt.show()
     
     
@@ -107,7 +98,7 @@ def main():
 def runtests(data,genmodel,qavg,nrm):
     testdata=edata()
     testdata.initializeCopy(data)
-    
+    nri=len(data.ikc)
     ergenlist=[]
     ertrainlist=[]
     ertestlist=[]
@@ -117,7 +108,7 @@ def runtests(data,genmodel,qavg,nrm):
     #seen twice!
     #questions seen per student
     sq=[]
-    for s in range(nrs):
+    for s in range(data.nrs):
         #Number of questions answered by student,
         nrans=r.normalvariate(qavg,5)
         if nrans<1:
@@ -129,10 +120,10 @@ def runtests(data,genmodel,qavg,nrm):
     for i in range(nrm):
         genmodel.changeData(data)
         genmodel.clearGenerate()
-        for s in range(nrs):
+        for s in range(data.nrs):
             for j in range(sq[s]):
                 genmodel.generate(s,r.randrange(nri))
-                
+        print "just did generating"  
 #        answered=range(nri)
 #        r.shuffle(answered)
 #        print answered[0]
@@ -147,11 +138,12 @@ def runtests(data,genmodel,qavg,nrm):
         #continue with making a testset
         genmodel.changeData(testdata)
         genmodel.clearGenerate()
-        for s in range(nrs):
+        for s in range(data.nrs):
             genmodel.generate(s,r.randrange(nri))
             ertestlist.append(genmodel.giveGenError())
         model=complexModel(data,True)
         err = model.fit()
+        print "just did fitting"
         ertrainlist.append(err)
         
         ertestlist.append(model.useTestset(testdata))
@@ -163,9 +155,16 @@ def runtests(data,genmodel,qavg,nrm):
         model.normalizeParameters()
         modellist.append(model)
     compareParams(modellist)
-    rSpearman=np.zeros(6)    
+    #genmodel.printParamStats()
+    rSpearman=np.zeros(6)
     for model in modellist:
-        rSpearman+=model.spearman(genmodel)
+        #model.printParamStats()
+        adding=model.spearman(genmodel)
+
+        for v in adding:
+            if v==np.NaN:
+                print "we have a NaN!"
+        rSpearman+=adding
     return rSpearman/nrm
     tSpearman=np.zeros(6)
     for nr,model in enumerate(modellist):

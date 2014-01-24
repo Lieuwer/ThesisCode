@@ -38,6 +38,6 @@ nosetests.xml
 *.png
 *.edata
 *.cmodel
-*.pfamodel
-*.eirtmodel
-*.lfamodel
+*.pmodel
+*.emodel
+*.amodel

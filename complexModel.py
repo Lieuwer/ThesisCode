@@ -4,14 +4,12 @@ import math as m
 import numpy as np
 import scipy.sparse as sparsesp
 from sklearn import linear_model
-
-import scipy.stats as stat
 from model import model
 
 class complexModel(model):
     def __init__(self,data,fullmatrix=True):
         #debug option
-        self.debug=True
+        self.debug=False
         #fullmatrix is a lot faster, but takes more memory and can thus simply
         #be infeasable
         self.fullmatrix=fullmatrix        
@@ -24,6 +22,15 @@ class complexModel(model):
         self.cb=np.zeros(data.nrkc)
         self.st=np.zeros(data.nrs)
         self.se=np.zeros(data.nrs)
+        
+        self.paranames=["alpha","beta","gamma","ro","theta0","eta"]
+        self.parameters=[]
+        self.parameters.append(self.ca)
+        self.parameters.append(self.cb)
+        self.parameters.append(self.cg)        
+        self.parameters.append(self.cr)        
+        self.parameters.append(self.st)
+        self.parameters.append(self.se)
         
         self.basekcc=np.zeros((data.nrs,data.nrkc))
         self.basekcf=np.zeros((data.nrs,data.nrkc))        
@@ -64,21 +71,7 @@ class complexModel(model):
             self.cg[i]=g
             self.cr[i]=g*r.uniform(.2,.8)
             self.cb[i]=r.normalvariate(0,1.5)
-     
-
-        
-    def clearGenerate(self):
-        #clear the data and reset the generator to the moment when no data is made yet
-        self.data.clearData()
-        self.kcc=self.basekcc.copy()
-        self.kcf=self.basekcf.copy()
-    
-    def setBaseKCCF(self,other):
-        self.basekcc=other.kcc.copy()
-        self.basekcf=other.kcf.copy()
-        self.kcc=self.basekcc.copy()
-        self.kcf=self.basekcf.copy()
-    
+                 
     def predict(self,s,i):
         k=float(len(self.ikc[i]))
         x=0
@@ -96,18 +89,7 @@ class complexModel(model):
                 self.kcc+=1        
         return p
     
-    def giveParams(self):
-        return (self.ca, self.cb, self.cg, self.cr,self.st,self.se)
-        
-    def spearman(self, other):
-        answerlist=np.zeros(6)
-        answerlist[0]=stat.spearmanr(self.ca,other.ca)[0]
-        answerlist[1]=stat.spearmanr(self.cb,other.cb)[0]
-        answerlist[2]=stat.spearmanr(self.cg,other.cg)[0]
-        answerlist[3]=stat.spearmanr(self.cr,other.cr)[0]
-        answerlist[4]=stat.spearmanr(self.st,other.st)[0]
-        answerlist[5]=stat.spearmanr(self.se,other.se)[0]
-        return answerlist
+    
     #
     # Methods for the fitting procedure
     #
