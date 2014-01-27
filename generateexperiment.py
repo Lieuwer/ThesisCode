@@ -1,4 +1,5 @@
 from complexModel import complexModel
+from pfasModel import pfasModel
 from edata import edata
 import numpy as np
 import time
@@ -63,7 +64,7 @@ def main():
     runs=5
     #average number of questions per student:
     #qslist =[5,10,20,40,80]
-    qslist=[5,10,20,40]
+    qslist=[5,10,20,40,160,320]
     #nr of runs/models to be made
     results=[]
 
@@ -156,7 +157,7 @@ def runtests(data,genmodel,qavg,nrm):
         modellist.append(model)
     compareParams(modellist)
     #genmodel.printParamStats()
-    rSpearman=np.zeros(6)
+    rSpearman=np.zeros(len(genmodel.giveParams()))
     for model in modellist:
         #model.printParamStats()
         adding=model.spearman(genmodel)

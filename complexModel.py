@@ -47,21 +47,21 @@ class complexModel(model):
         #create student parameter estimates, now done in same fashion as generating data
         #create student parameter estimates, now done in same fashion as generating data
         for i in range(data.nrs):
-            self.st[i]=r.normalvariate(0,.5)
-            self.se[i]=r.uniform(.06,.15)
+            self.st[i]=r.normalvariate(-.75,1)
+            self.se[i]=r.uniform(.01,.05)
 
         #create knowledge component parameter estimates, idem as above
         for i in range(data.nrkc):
-            self.ca[i]=r.uniform(.75,1.5)
-            g=r.uniform(.75,1.5)
+            self.ca[i]=r.uniform(.7,1.5)
+            g=r.uniform(.7,1.4)
             self.cg[i]=g
             self.cr[i]=g*r.uniform(.2,.8)
-            self.cb[i]=r.normalvariate(0,.5)
+            self.cb[i]=r.normalvariate(0,1)
         
     def genParams(self):       
         
         for i in range(self.data.nrs):
-            self.st[i]=r.normalvariate(-.03,1)
+            self.st[i]=r.normalvariate(-.75,1)
             self.se[i]=r.uniform(.01,.05)
 
         #create knowledge component parameter estimates, idem as above

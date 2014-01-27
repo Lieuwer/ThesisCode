@@ -34,9 +34,10 @@ def aprime(predict,labels):
         for no in incorrect:
             if yes>no:
                 total+=1
+
     print "error=", error/len(labels)
     print "accuracy=", cor/len(labels)
-    print "a-prima=", total/(len(correct)*len(incorrect))
+    print "a-prime=", total/(len(correct)*len(incorrect))
     return total/(len(correct)*len(incorrect))
 
 class model(object):
@@ -107,3 +108,6 @@ class model(object):
     
     def nrParams(self):
         return len(self.parameters)
+        
+    def normalizeParameters(self):
+        return

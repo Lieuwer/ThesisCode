@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Jan 27 14:02:47 2014
+
+@author: Lieuwe
+"""
+
 import random as r
 import math as m
 import numpy as np
@@ -6,7 +13,7 @@ from sklearn import linear_model
 import scipy.stats as stat
 from model import model
 
-class pfasModel(model):
+class afmModel(model):
     def __init__(self,data,fullmatrix=True):
         #fullmatrix is a lot faster, but takes more memory and can thus simply
         #be infeasable        
@@ -15,15 +22,13 @@ class pfasModel(model):
         self.ikc=data.ikc
         #lists that will hold the parameters of items and students
         self.cg=np.zeros(data.nrkc)
-        self.cr=np.zeros(data.nrkc)
         self.cb=np.zeros(data.nrkc)
         self.st=np.zeros(data.nrs)
         
-        self.paranames=["beta","gamma","ro","theta0"]
+        self.paranames=["beta","gamma","theta0"]
         self.parameters=[]
         self.parameters.append(self.cb)
-        self.parameters.append(self.cg)
-        self.parameters.append(self.cr)        
+        self.parameters.append(self.cg)       
         self.parameters.append(self.st)        
         
         self.basekcc=np.zeros((data.nrs,data.nrkc))
@@ -45,9 +50,7 @@ class pfasModel(model):
 
         #create knowledge component parameter estimates, idem as above
         for i in range(data.nrkc):
-            g=r.uniform(.05,.02)
-            self.cg[i]=g
-            self.cr[i]=g*r.uniform(.2,.8)
+            self.cg[i]=r.uniform(.075,.15)
             self.cb[i]=r.normalvariate(0,.5)
         
     def genParams(self):       
@@ -58,15 +61,13 @@ class pfasModel(model):
 
         #create knowledge component parameter estimates, idem as above
         for i in range(self.data.nrkc):
-            g=r.uniform(.005,.02)
-            self.cg[i]=g
-            self.cr[i]=g*r.uniform(.2,.8)
+            self.cg[i]=r.uniform(.005,.02)
             self.cb[i]=r.normalvariate(0,1.5)
         
     def predict(self,s,i):
         x=self.st[s]
         for c in self.ikc[i]:
-            x+=self.kcf[s,c]*self.cr[c]+self.kcc[s,c]*self.cg[c]-self.cb[c]
+            x+=(self.kcf[s,c]+self.kcc[s,c])*self.cg[c]-self.cb[c]
         try:
             p=1/(m.exp(-x)+1)
         except:
@@ -91,7 +92,7 @@ class pfasModel(model):
         if self.fullmatrix:  
             studentdata=np.zeros((len(self.data.data),nrs+nrkc*3))
         else:
-            studentdata=sparsesp.lil_matrix((len(self.data.data),nrs+nrkc*3))
+            studentdata=sparsesp.lil_matrix((len(self.data.data),nrs+nrkc*2))
         #keep track of questions answered correctly and questions answered wrongly
         kcc = self.kcc= np.zeros((nrs,nrkc))
         kcf = self.kcf= np.zeros((nrs,nrkc))
@@ -103,10 +104,9 @@ class pfasModel(model):
             x=self.st[s]
             studentdata[nr,s]=1
             for c in self.ikc[it]:
-                x+=kcf[s,c]*self.cr[c]+kcc[s,c]*self.cg[c]-self.cb[c]
-                studentdata[nr,c+nrs]=kcc[s,c]
-                studentdata[nr,c+nrs+nrkc]=kcf[s,c]
-                studentdata[nr,nrs+c+2*nrkc]=-1
+                x+=(kcf[s,c]+kcc[s,c])*self.cg[c]-self.cb[c]
+                studentdata[nr,c+nrs]=kcc[s,c]+kcf[s,c]
+                studentdata[nr,nrs+c+nrkc]=-1
                 if labels[nr]:
                     kcc[s,c]+=1
                 else:
@@ -126,8 +126,7 @@ class pfasModel(model):
                   
         self.st=model.coef_[0][:nrs].copy()
         self.cg=model.coef_[0][nrs:nrs+nrkc].copy()
-        self.cr=model.coef_[0][nrs+nrkc:nrs+nrkc*2].copy()
-        self.cb=model.coef_[0][nrs+nrkc*2:].copy()
+        self.cb=model.coef_[0][nrs+nrkc:].copy()
         #Save the found kcc and kcf
 
         
