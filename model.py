@@ -13,7 +13,6 @@ def aprime(predict,labels):
     #Does not yet take into account the issue that there is dependancy between some of the data
     correct=[0]*sum(labels)
     incorrect=[0]*(len(labels)-len(correct))
-    print len(correct), len(incorrect)
     c=n=0
     error=0.0
     cor=0.0
@@ -22,12 +21,12 @@ def aprime(predict,labels):
             if predict[i]>=.5:cor+=1
             correct[c]=predict[i]
             c+=1
-            error+=1-predict[i]
+            error-=np.log(1-predict[i])
         else:
             if predict[i]<.5:cor+=1
             incorrect[n]=predict[i]
             n+=1
-            error+=predict[i]
+            error-=np.log(predict[i])
     total=0.0
 
     for yes in correct:
@@ -38,6 +37,8 @@ def aprime(predict,labels):
     print "error=", error/len(labels)
     print "accuracy=", cor/len(labels)
     print "a-prime=", total/(len(correct)*len(incorrect))
+    print "corrects",len(correct), sum(correct)/len(correct)
+    print "incorrects", len(incorrect), sum(incorrect)/len(incorrect)
     return total/(len(correct)*len(incorrect))
 
 class model(object):
@@ -74,10 +75,10 @@ class model(object):
         self.data.data.append((s,i))
         if r.random()<p:
             self.data.labels.append(1)
-            self.genError+=(1-p)
+            self.genError-=np.log(1-p)
         else:
             self.data.labels.append(0)
-            self.genError+=p
+            self.genError-=np.log(p)
 
     def giveGenError(self):
         return self.genError/len(self.data.data)
@@ -99,7 +100,20 @@ class model(object):
     def printParamStats(self):
         for i in range(len(self.paranames)):
             print self.paranames[i],len(self.parameters[i]), np.average(self.parameters[i]), np.std(self.parameters[i])
-        
+    
+    def predict(self,s,i):
+        p=self.probability(s,i)
+        if p<.5:
+            for c in self.ikc[i]:
+                self.kcf[s,c]+=1
+        else:
+            for c in self.ikc[i]:
+                self.kcc[s,c]+=1        
+        return p
+    
+    def addParam(self, par):
+        self.parameters.append(par)
+    
     def spearman(self, other):
         answerlist=np.zeros(len(self.parameters))
         for i in range(len(answerlist)):

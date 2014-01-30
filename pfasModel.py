@@ -63,21 +63,14 @@ class pfasModel(model):
             self.cr[i]=g*r.uniform(.2,.8)
             self.cb[i]=r.normalvariate(0,1.5)
         
-    def predict(self,s,i):
+    def probability(self,s,i):
         x=self.st[s]
         for c in self.ikc[i]:
             x+=self.kcf[s,c]*self.cr[c]+self.kcc[s,c]*self.cg[c]-self.cb[c]
         try:
-            p=1/(m.exp(-x)+1)
+            return 1/(m.exp(-x)+1)
         except:
-            p=0
-        if p<.5:
-            for c in self.ikc[i]:
-                self.kcf+=1
-        else:
-            for c in self.ikc[i]:
-                self.kcc+=1        
-        return p
+            return 0
         
     #
     # Methods for the fitting procedure
@@ -124,10 +117,10 @@ class pfasModel(model):
         model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1',C=10^9)
         model.fit(studentdata,labels)
                   
-        self.st=model.coef_[0][:nrs].copy()
-        self.cg=model.coef_[0][nrs:nrs+nrkc].copy()
-        self.cr=model.coef_[0][nrs+nrkc:nrs+nrkc*2].copy()
-        self.cb=model.coef_[0][nrs+nrkc*2:].copy()
+        self.st[:]=model.coef_[0][:nrs]
+        self.cg[:]=model.coef_[0][nrs:nrs+nrkc]
+        self.cr[:]=model.coef_[0][nrs+nrkc:nrs+nrkc*2]
+        self.cb[:]=model.coef_[0][nrs+nrkc*2:]
         #Save the found kcc and kcf
 
         

@@ -5,6 +5,7 @@ import numpy as np
 import scipy.sparse as sparsesp
 from sklearn import linear_model
 from model import model
+import scipy.stats as stat
 
 class complexModel(model):
     def __init__(self,data,fullmatrix=True):
@@ -72,22 +73,15 @@ class complexModel(model):
             self.cr[i]=g*r.uniform(.2,.8)
             self.cb[i]=r.normalvariate(0,1.5)
                  
-    def predict(self,s,i):
+    def probability(self,s,i):
         k=float(len(self.ikc[i]))
         x=0
         for c in self.ikc[i]:
             x+=self.ca[c]*self.st[s]/k+(self.kcf[s,c]*self.cr[c]+self.kcc[s,c]*self.cg[c])*self.se[s]-self.cb[c]
         try:
-            p=1/(m.exp(-x)+1)
+            return 1/(m.exp(-x)+1)
         except:
-            p=0
-        if p<.5:
-            for c in self.ikc[i]:
-                self.kcf+=1
-        else:
-            for c in self.ikc[i]:
-                self.kcc+=1        
-        return p
+            return 0
     
     
     #
@@ -137,9 +131,9 @@ class complexModel(model):
         model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1',C=10^9)
         model.fit(studentdata,labels)
                   
-        self.st=model.coef_[0][:nrs].copy()
-        self.se=model.coef_[0][nrs:nrs*2].copy()
-        self.cb=model.coef_[0][nrs*2:].copy()
+        self.st[:]=model.coef_[0][:nrs]
+        self.se[:]=model.coef_[0][nrs:nrs*2]
+        self.cb[:]=model.coef_[0][nrs*2:]
         #Save the found kcc and kcf
 
         
@@ -190,10 +184,10 @@ class complexModel(model):
         model.fit(kcdata,labels)
         
         
-        self.ca=model.coef_[0][:nrkc].copy()
-        self.cg=model.coef_[0][nrkc:nrkc*2].copy()
-        self.cr=model.coef_[0][nrkc*2:nrkc*3].copy()
-        self.cb=model.coef_[0][nrkc*3:].copy()
+        self.ca[:]=model.coef_[0][:nrkc]
+        self.cg[:]=model.coef_[0][nrkc:nrkc*2]
+        self.cr[:]=model.coef_[0][nrkc*2:nrkc*3]
+        self.cb[:]=model.coef_[0][nrkc*3:]
         
         return totalerror/len(self.data.data)
 
@@ -243,7 +237,7 @@ class complexModel(model):
             self.se/=avge
             self.cr*=avge
             self.cg*=avge
-        
+    
 
 #        plt.figure(1)
 #        plt.plot(erlist)

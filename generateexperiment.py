@@ -1,5 +1,6 @@
 from complexModel import complexModel
 from pfasModel import pfasModel
+from afmModel import afmModel
 from edata import edata
 import numpy as np
 import time
@@ -61,10 +62,10 @@ def main():
     nrs = 100
     nri = 300
     nrkc = 15
-    runs=5
+    runs=10
     #average number of questions per student:
     #qslist =[5,10,20,40,80]
-    qslist=[5,10,20,40,160,320]
+    qslist=[5,10,20,40,80,160]
     #nr of runs/models to be made
     results=[]
 
@@ -119,8 +120,9 @@ def runtests(data,genmodel,qavg,nrm):
     
     #Generate models a number of times
     for i in range(nrm):
-        genmodel.changeData(data)
         genmodel.clearGenerate()
+        genmodel.changeData(data)
+        genmodel.clearGenerate()        
         for s in range(data.nrs):
             for j in range(sq[s]):
                 genmodel.generate(s,r.randrange(nri))
@@ -138,7 +140,6 @@ def runtests(data,genmodel,qavg,nrm):
         ergenlist.append(genmodel.giveGenError())
         #continue with making a testset
         genmodel.changeData(testdata)
-        genmodel.clearGenerate()
         for s in range(data.nrs):
             genmodel.generate(s,r.randrange(nri))
             ertestlist.append(genmodel.giveGenError())

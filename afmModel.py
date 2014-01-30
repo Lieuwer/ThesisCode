@@ -43,8 +43,7 @@ class afmModel(model):
         self.genError=0.0
         #This keeps track over the errors while fitting
         self.fitError=[1,1]
-        #create student parameter estimates, now done in same fashion as generating data
-        #create student parameter estimates, now done in same fashion as generating data
+        #create student parameter estimates, now done in similar fashion as generating data
         for i in range(data.nrs):
             self.st[i]=r.normalvariate(0,.5)
 
@@ -56,29 +55,26 @@ class afmModel(model):
     def genParams(self):       
         
         for i in range(self.data.nrs):
-            self.st[i]=r.normalvariate(-.5,1)
+            self.st[i]=r.normalvariate(0,1)
 
 
         #create knowledge component parameter estimates, idem as above
         for i in range(self.data.nrkc):
-            self.cg[i]=r.uniform(.005,.02)
+            self.cg[i]=r.uniform(.02,.05)
             self.cb[i]=r.normalvariate(0,1.5)
-        
-    def predict(self,s,i):
+    
+    def probability(self,s,i):
         x=self.st[s]
         for c in self.ikc[i]:
             x+=(self.kcf[s,c]+self.kcc[s,c])*self.cg[c]-self.cb[c]
         try:
-            p=1/(m.exp(-x)+1)
+            return 1/(m.exp(-x)+1)
         except:
-            p=0
-        if p<.5:
-            for c in self.ikc[i]:
-                self.kcf+=1
-        else:
-            for c in self.ikc[i]:
-                self.kcc+=1        
-        return p
+            return 0
+            
+        
+    
+
         
     #
     # Methods for the fitting procedure
@@ -90,15 +86,15 @@ class afmModel(model):
         labels=self.data.labels
         #Create an array of dimensions number of datapoints by number of students *2 + number of kcs
         if self.fullmatrix:  
-            studentdata=np.zeros((len(self.data.data),nrs+nrkc*3))
+            studentdata=np.zeros((len(self.data.data),nrs+nrkc*2))
         else:
             studentdata=sparsesp.lil_matrix((len(self.data.data),nrs+nrkc*2))
         #keep track of questions answered correctly and questions answered wrongly
         kcc = self.kcc= np.zeros((nrs,nrkc))
         kcf = self.kcf= np.zeros((nrs,nrkc))
         totalerror=0.0
+        print "entering data"
         for nr,d in enumerate(self.data.giveData()):
-            
             s=d[0]
             it=d[1]
             x=self.st[s]
@@ -121,15 +117,14 @@ class afmModel(model):
                 if not labels[nr]:
                     print "WARNING: major error added in s"
                     totalerror+=1
+        print "about to fit model"
         model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1',C=10^9)
         model.fit(studentdata,labels)
-                  
-        self.st=model.coef_[0][:nrs].copy()
-        self.cg=model.coef_[0][nrs:nrs+nrkc].copy()
-        self.cb=model.coef_[0][nrs+nrkc:].copy()
-        #Save the found kcc and kcf
-
-        
+        print "Copying parameters"        
+        self.st[:]=model.coef_[0][:nrs]
+        self.cg[:]=model.coef_[0][nrs:nrs+nrkc]
+        self.cb[:]=model.coef_[0][nrs+nrkc:]
+        #Save the found kcc and kcf   
         return totalerror/len(self.data.data)
 
     def fit(self,maxiterations=50):

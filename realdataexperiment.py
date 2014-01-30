@@ -4,6 +4,7 @@ import time,datetime
 from collections import defaultdict
 import matplotlib.pyplot as plt
 from complexModel import complexModel
+from afmModel import afmModel
 import numpy as np
 
 def main():
@@ -26,36 +27,38 @@ def main():
 #    plt.plot(fig.keys(),fig.values())
 #    plt.show()
     print len(test.data)
-    test.removekcsq(3,15)
+    test.removekcsq(6,15)
     test.checkdata()
 
     trainerror=[]
     testerror=[]
     print len(test.data)
     datas=test.splitDataS(3)
+    print len(datas[0])
     for i in range(len(datas)):
+        
         models.append(complexModel(datas[i],False))
         if i>0:
             models[i].setBaseKCCF(models[i-1])
+        print "training"
         trainerror.append(models[i].fit())
         if i<len(datas)-1:
             testerror.append(models[i].useTestset(datas[i+1]))
             print "test done"
         else:
             #set kcc
-            models[i].basekcc=models[i-2].basekcc.copy()
-            models[i].basekcf=models[i-2].basekcf.copy()
+            models[i].setBaseKCCF(models[i-2])
             testerror.append(models[i].useTestset(datas[i-1]))
-    tSpearman=np.zeros(6)
+    tSpearman=np.zeros(len(models[0].giveParams()))
     for nr,model in enumerate(models):
         for i in range (nr):
             tSpearman+=model.spearman(models[i])
-    print "alpha, beta, gamma, ro, t0, eta"
+    print models[0].paranames
     nrm=len(models)
     print tSpearman/(nrm/2*(nrm+1))
     print trainerror
     print sum(trainerror)/float(len(trainerror))
-    print testerror
+#    print testerror
     
 if __name__ == "__main__":
     t0=time.time()
