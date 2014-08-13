@@ -73,14 +73,58 @@ class afmModel(model):
             return 0
             
         
-    
-
+    def covarianceMatrix(self):
+        #Returns the covariance matrix according to Fisher information based on the current estimates of the parameters
+        nrs=len(self.st)
+        nrkc=len(self.cb)  
+        labels=self.data.labels
+        if self.fullmatrix:  
+            data=np.zeros((len(self.data.data),nrs+nrkc*2))
+            R=np.zeros((len(self.data.data),len(self.data.data)))
+        else:
+            data=sparsesp.lil_matrix((len(self.data.data),nrs+nrkc*2))
+            R=sparsesp.lil_matrix((len(self.data.data),len(self.data.data)))
+        kcc = self.kcc= np.zeros((nrs,nrkc))
+        kcf = self.kcf= np.zeros((nrs,nrkc))
+        for nr,d in enumerate(self.data.giveData()):
+            s=d[0]
+            it=d[1]
+            x=self.st[s]
+            data[nr,s]=1
+            for c in self.ikc[it]:
+                x+=(kcf[s,c]+kcc[s,c])*self.cg[c]-self.cb[c]
+                data[nr,c+nrs]=kcc[s,c]+kcf[s,c]
+                data[nr,nrs+c+nrkc]=-1
+                if labels[nr]:
+                    kcc[s,c]+=1
+                else:
+                    kcf[s,c]+=1
+            try:
+                big=m.exp(-x)+1
+                R[nr,nr]=1/big*(1-1/big)
+            except:
+                0
+        data=data.tocsr()
+        moment=(data.transpose()*R*data)
+        #inversing can be a problem as the matrix can be singular, thus removing those rows and collumns where diagonal is zero
+#        removing=[]
+#        nrparams = moment.shape[0]
+#        mask=np.ones(nrparams,dtype=bool)
+#        for i in range(nrparams):
+#            if moment[i,i]==0:
+#                removing.append(i)
+#        mask[removing]=False
+#        w=np.flatnonzero(mask)
+#        temp = moment[w,:]
+#        print "removed: ", removing
+#        return np.linalg.inv(temp[:,w].todense())
+        return np.linalg.pinv(moment.todense())
         
     #
     # Methods for the fitting procedure
     #
     def sUpdate(self):
-        #Do a single fitting of the student parameters and update them
+        #Only a single update function necessary, because the model is linear within the logistic function
         nrs=len(self.st)
         nrkc=len(self.cb)
         labels=self.data.labels
@@ -128,6 +172,9 @@ class afmModel(model):
         return totalerror/len(self.data.data)
 
     def fit(self,maxiterations=50):
+        """
+        Testing to see if this works
+        """
         self.fitError.append(self.sUpdate())
         return self.fitError[-1]
         

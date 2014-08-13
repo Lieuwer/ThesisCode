@@ -94,8 +94,8 @@ class edata:
         self.nrkc=nrkc
 
     def initializeCopy(self,other,data=[],labels=[]):
-        self.data=data
-        self.labels=labels
+        self.data=data[:]
+        self.labels=labels[:]
         self.ikc=other.ikc
         self.nrs=other.nrs
         self.nrkc=other.nrkc
@@ -246,14 +246,15 @@ class edata:
         skip=0
         dCounter=0
         for i in range(max(sq.keys())+1):
+            #every part gets an equal part from every student and a rest is left
             perS=sq[i]/parts
             rest=sq[i]%parts
             for j in range(parts):
-                if j<rest: extra=1
+                if ((j+skip)%parts)<rest: extra=1
                 else: extra = 0
                 for k in range(perS+extra):
-                    sets[(j+skip)%parts].data.append(self.data[dCounter])
-                    sets[(j+skip)%parts].labels.append(self.labels[dCounter])
+                    sets[j].data.append(self.data[dCounter])
+                    sets[j].labels.append(self.labels[dCounter])
                     
                     
                     if self.data[dCounter][0] != i:

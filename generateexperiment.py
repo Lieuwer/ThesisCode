@@ -1,6 +1,7 @@
 from complexModel import complexModel
 from pfasModel import pfasModel
 from afmModel import afmModel
+from eirtModel import eirtModel
 from edata import edata
 import numpy as np
 import time
@@ -61,11 +62,11 @@ def main():
     #number of students; number of questions; number of components
     nrs = 100
     nri = 300
-    nrkc = 15
+    nrkc = 30
     runs=10
     #average number of questions per student:
     #qslist =[5,10,20,40,80]
-    qslist=[5,10,20,40,80,160]
+    qslist=[5,10,20,40,80,160,240]
     #nr of runs/models to be made
     results=[]
 
@@ -73,7 +74,7 @@ def main():
 
     data = edata()
     data.generate(nrs,nrkc,nri)
-    genmodel=complexModel(data)
+    genmodel=afmModel(data)
     genmodel.genParams()    
     
     for qs in qslist:
@@ -143,7 +144,7 @@ def runtests(data,genmodel,qavg,nrm):
         for s in range(data.nrs):
             genmodel.generate(s,r.randrange(nri))
             ertestlist.append(genmodel.giveGenError())
-        model=complexModel(data,True)
+        model=afmModel(data,True)
         err = model.fit()
         print "just did fitting"
         ertrainlist.append(err)

@@ -8,6 +8,7 @@ import cPickle as pickle
 import random as r
 import scipy.stats as stat
 import numpy as np
+import copy
 
 def aprime(predict,labels):
     #Does not yet take into account the issue that there is dependancy between some of the data
@@ -28,16 +29,16 @@ def aprime(predict,labels):
             n+=1
             error-=np.log(predict[i])
     total=0.0
-
-    for yes in correct:
-        for no in incorrect:
-            if yes>no:
-                total+=1
+## should make an n log n implementation of this, including a heuristic to have the larger value in the log
+#    for yes in correct:
+#        for no in incorrect:
+#            if yes>no:
+#                total+=1
 
     print "error=", error/len(labels)
     print "accuracy=", cor/len(labels)
     print "a-prime=", total/(len(correct)*len(incorrect))
-    print "corrects",len(correct), sum(correct)/len(correct)
+    print "corrects",len(correct)/float(len(correct)+len(incorrect)), sum(correct)/len(correct)
     print "incorrects", len(incorrect), sum(incorrect)/len(incorrect)
     return total/(len(correct)*len(incorrect))
 
@@ -125,3 +126,35 @@ class model(object):
         
     def normalizeParameters(self):
         return
+        
+    def determineVariance(self,runs):
+        #This method determines the variance of parameter values caused by
+        #the stochastic nature of the data. Data is generated 'runs' times,
+        #redetermining only the labels, and the model is fitted each time.
+        #the variance for each parameter over all runs is determined
+        params=[]
+        for i in range(len(self.parameters)):      
+            params.append(np.zeros((runs,len(self.parameters[i]))))
+        othermodel=copy.deepcopy(self)
+        for i in range(runs):
+            
+            othermodel.clearGenerate()
+            for d in self.data.giveData():
+                othermodel.generate(d[0],d[1])
+            othermodel.fit()
+            for j,p in enumerate(othermodel.giveParams()):
+                params[j][i,:]=p
+        stds=[]
+        for i in range(len(self.parameters)):
+            print ""
+            print self.paranames[i]
+            avg=np.mean(params[i],0)
+            std=np.std(params[i],0)
+            stds.append(std)
+            for j in range(params[i].shape[1]):
+                print j,avg[j],std[j]
+        stds=np.concatenate(stds)
+        return stds
+            
+    
+    
