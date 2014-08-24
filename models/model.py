@@ -73,12 +73,11 @@ class model(object):
     
     def generate(self,s,i):
         p = self.predict(s,i)
-        self.data.data.append((s,i))
         if r.random()<p:
-            self.data.labels.append(1)
+            self.addPoint(s,i,1)
             self.genError-=np.log(1-p)
         else:
-            self.data.labels.append(0)
+            self.addPoint(s,i,0)
             self.genError-=np.log(p)
 
     def giveGenError(self):

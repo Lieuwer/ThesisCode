@@ -1,9 +1,5 @@
-'''
-Do some questions have different (number) of kcs associated with them at different times?
-Because the distribution of number of kcs per question includes up to 7 when 
-running on all steps, but only up to 5 when only looking at the first time a 
-question appears.
-'''
+import sys
+sys.path.append('..\models')
 from edata import edata
 from collections import defaultdict
 

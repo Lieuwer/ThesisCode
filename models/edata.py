@@ -21,8 +21,7 @@ class edata:
                 maxs=self.data[i][0]
             elif self.data[i][0]<maxs:
                 print "Help, current student is lower than highest seen"
-                print self.data[i][0],maxs               
-                i=q
+                print self.data[i][0],maxs
         sq=self.countStudentQuestions()
         
         dc=0
@@ -54,7 +53,12 @@ class edata:
         self.ikc=None
         self.nrs=None
         self.nrkc=None
-
+    
+    def addPoint(self,s,i,c):
+        #Add a point, with student s, item i, and correctness c
+        self.data.append((s,i))
+        self.labels.append(c)
+    
     def giveData(self):
         i=0
         while i<len(self.data):
@@ -235,7 +239,22 @@ class edata:
             if len(self.ikc[d[1]])<minkc: minkc=len(self.ikc[d[1]])
             if max(self.ikc[d[1]])>maxkc:maxkc=max(self.ikc[d[1]])
         print maxs, maxi, maxkc, minkc, self.nrs, self.nrkc
-            
+
+    def splitDataStudent(self,parts):
+        #splits the data in 'parts' # parts, where the records of any user
+        #are all in the same part
+        sets=[]
+        for i in range(parts):
+            sets.append(edata())
+            sets[i].initializeCopy(self)
+        smap=range(self.nrs)
+        r.shuffle(smap)
+        for i in range(len(smap)):
+            smap[i]=smap[i]%parts
+        for dat in self.giveData():
+            sets[smap[dat[0]]].addPoint(dat[0],dat[1],dat[2])
+        return sets
+        
     def splitDataS(self,parts):
         sets=[]
         for i in range(parts):
@@ -260,7 +279,6 @@ class edata:
                     if self.data[dCounter][0] != i:
                         print i,self.data[dCounter][0]
                         print "Student being processed and in data don't match!"
-                        i=q
                     dCounter+=1
             skip=(skip+rest)%parts
         for i in range(parts):

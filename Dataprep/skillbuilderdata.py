@@ -1,9 +1,5 @@
-'''
-Do some questions have different (number) of kcs associated with them at different times?
-Because the distribution of number of kcs per question includes up to 7 when 
-running on all steps, but only up to 5 when only looking at the first time a 
-question appears.
-'''
+import sys
+sys.path.append('..\models')
 from edata import edata
 from collections import defaultdict
 
@@ -11,7 +7,7 @@ from collections import defaultdict
 
 
 def main():
-    trainfile="D:\\scriptie\\Thesisdata\\gong3\\PFA_train_with_splitting.csv"
+    trainfile="D:\\scriptie\\Thesisdata\\skill_builder_data.csv"
     testsfile="D:\\scriptie\\Thesisdata\\gong\\student_pretest_posttest.csv"
     f = open(trainfile, 'r')
     #Steps will count for each item, how often it occurs
@@ -23,7 +19,8 @@ def main():
     #First line has the headers
     line=f.readline()
     for n,p in enumerate(line.split(',')):
-        print n, p
+        print n,p
+
     #ikc links question # to KC #
     ikc={}
     icounter=0
@@ -36,28 +33,31 @@ def main():
     kcs=defaultdict(int)
     data=[]
     labels=[]
+    kcitems=0
     additional=0
     total = 0
-
-    check=defaultdict(int)    
-    
     for line in f:
         total+=1
         parts=line.split(',')
-        sid[int(parts[1])]+=1
+        sid[int(parts[2])]+=1
         item=int(parts[4])
         items[item]+=1
-        skill=int(parts[0])
-        kcs[skill]+=1
-        if not ikc.has_key(item):
-            ikc[item]=[skill]
-        elif not skill in ikc[item]:
-            ikc[item].append(skill)
-            additional+=1
-
+        if len(parts[16])>0:
+            if items[item]==1: kcitems+=1
+            existing=True
+            for p in parts[16].split(';'):
+                skill=int(p)
+                kcs[skill]+=1
+                if not ikc.has_key(item):
+                    ikc[item]=[skill]
+                    existing=False
+                elif not skill in ikc[item]:
+                    ikc[item].append(skill)
+                    if existing:
+                        additional+=1
     print "total records", total
     print "number students", len(sid.keys())
-    print "number of items", len(items.keys())
+    print "number of items / items with kcs", len(items.keys()), kcitems
     print "number of kcs", len(kcs.keys())
     print "Added skills", additional
     kcq=defaultdict(int)

@@ -1,0 +1,26 @@
+Dataset 
+train.edata:
+
+number of items:  173113
+number of records:  607025
+number of kcs:  110
+number of students:  574
+#kcs #items
+1 114726
+2 55581
+3 2740
+4 65
+5 1
+#kcs #items after taking things into account
+Problem with different kc's at times. Bottom (all kc's mentioned for every item) is the one taken in the model.
+1 113581
+2 56393
+3 2991
+4 97
+5 37
+6 12
+7 2
+
+test.edata:
+Warning: student not seen GrT3u8W8Wm
+Number of records:  3966  records skipped:  1
