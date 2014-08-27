@@ -52,6 +52,19 @@ class model(object):
     def load(filename):
         filehandle=open(filename,"rb")
         return pickle.load(filehandle)
+        
+    def parameterVariance(self,parname):
+        try:
+            if parname=="t":
+                return np.var(self.st)
+            if parname=="b":
+                return np.var(self.cb)
+            if parname=="g":
+                return np.var(self.cg)
+            if parname=="r":
+                return np.var(self.cr)
+        except:
+            print "Error, this parameter doesn't exist in the model, thus variance cannot be given"
     
     def clearGenerate(self):
         #clear the data and reset the generator to the moment when no data is made yet
@@ -74,10 +87,10 @@ class model(object):
     def generate(self,s,i):
         p = self.predict(s,i)
         if r.random()<p:
-            self.addPoint(s,i,1)
+            self.data.addPoint(s,i,1)
             self.genError-=np.log(1-p)
         else:
-            self.addPoint(s,i,0)
+            self.data.addPoint(s,i,0)
             self.genError-=np.log(p)
 
     def giveGenError(self):
@@ -143,17 +156,17 @@ class model(object):
             othermodel.fit()
             for j,p in enumerate(othermodel.giveParams()):
                 params[j][i,:]=p
-        stds=[]
+        variances=[]
         for i in range(len(self.parameters)):
-            print ""
-            print self.paranames[i]
             avg=np.mean(params[i],0)
-            std=np.std(params[i],0)
-            stds.append(std)
-            for j in range(params[i].shape[1]):
-                print j,avg[j],std[j]
-        stds=np.concatenate(stds)
-        return stds
+            var=np.var(params[i],0)
+            variances.append(var)
+#            print ""
+#            print self.paranames[i]
+#            for j in range(params[i].shape[1]):
+#                print j,avg[j],var[j]
+        variances=np.concatenate(variances)
+        return variances
             
     
     

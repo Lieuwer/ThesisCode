@@ -114,7 +114,8 @@ def main():
 #        print kc
     datafile=edata()
     datafile.initialize(ikc, len(sid),len(kcsmap),data,labels)
-    datafile.save("train.edata")    
+    datafile.save("train.edata")
+
     
     f = open(testfile, 'r')
     # get rid of headers

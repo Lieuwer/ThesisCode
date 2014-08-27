@@ -53,6 +53,58 @@ class edata:
         self.ikc=None
         self.nrs=None
         self.nrkc=None
+        #in splitting kc's items or students may no longer be present in the set
+        self.kcmis=[]
+        self.itemmis=[]
+        self.studentmis=[]
+    
+    def createMissing(self):
+        iseen=defaultdict(int)
+        kcseen=defaultdict(int)
+        sseen=defaultdict(int)
+        for d in self.giveData():
+            sseen[d[0]]+=1
+            iseen[d[1]]+=1
+            for kc in self.ikc[d[1]]:
+                kcseen[kc]+=1
+        for i in range(self.nrs):
+            if not sseen[i]:
+                self.studentmis.append(i)
+        for i in range(self.nrkc):
+            if not kcseen[i]:
+                self.kcmis.append(i)
+        for i in range(len(self.ikc)):
+            if not iseen[i]:
+                self.itemmis.append(i)
+        smap=[-1]*self.nrs
+        skip=0
+        for i in range(self.nrs):
+            if not i in self.studentmis:
+                smap[i]=i-skip
+            else:
+                skip+=1
+        kcmap=[-1]*self.nrkc
+        skip=0
+        for i in range(self.nrkc):
+            if not i in self.kcmis:
+                kcmap[i]=i-skip
+            else:
+                skip+=1
+        self.nrs-=len(self.studentmis)
+        self.nrkc-=len(self.kcmis)
+        for i in range(len(self.ikc)):
+            old=self.ikc[i]
+            new=[]
+            for kc in old:
+                new.append(kcmap[kc])
+            self.ikc[i]=new
+        for i in range(len(self.data)):
+            d=self.data[i]
+            self.data[i]=(smap[d[0]],d[1])
+        
+        print "missing students/kcs/items vs total"
+        print len(self.studentmis),len(self.kcmis),len(self.itemmis),self.nrs,self.nrkc,len(self.ikc)
+            
     
     def addPoint(self,s,i,c):
         #Add a point, with student s, item i, and correctness c

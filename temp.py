@@ -22,7 +22,7 @@ def main():
     model=afmModel(data,False)
     model.fit()
     
-    z=model.determineVariance(10)
+    z=model.determineVariance(5)
     x=model.covarianceMatrix()
     #print z[682],z[683],x.shape,len(z)
     #682 & 683 removed to obtain covariance matrix
