@@ -36,6 +36,7 @@ nosetests.xml
 
 #extra
 *.png
+*.exp
 *.edata
 *.cmodel
 *.pmodel

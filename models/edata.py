@@ -2,6 +2,7 @@
 import cPickle as pickle
 import random as r
 from collections import defaultdict
+import copy
 
 #Go from a cumulative distribution list to determine what kc's are
 #linked to what item
@@ -49,6 +50,7 @@ class edata:
 
     def __init__(self):
         self.data=None
+        self.testdata=None
         self.labels=None
         self.ikc=None
         self.nrs=None
@@ -92,16 +94,30 @@ class edata:
                 skip+=1
         self.nrs-=len(self.studentmis)
         self.nrkc-=len(self.kcmis)
+        #Not really implemented yet
+        newikc=[]
         for i in range(len(self.ikc)):
-            old=self.ikc[i]
-            new=[]
-            for kc in old:
-                new.append(kcmap[kc])
-            self.ikc[i]=new
+#            if i in self.itemmis:
+#                continue
+            kclist=[]
+            for kc in self.ikc[i]:
+                kclist.append(kcmap[kc])
+            self.ikc[i]=kclist
+            newikc.append(kclist)
+        #self.ikc=newikc
         for i in range(len(self.data)):
             d=self.data[i]
             self.data[i]=(smap[d[0]],d[1])
-        
+        for i in range(len(self.testdata)):
+            d=self.testdata[i]
+            baditem=False
+            for kc in self.ikc[d[1]]:
+                if kc in self.kcmis:
+                    baditem=True
+            if baditem:
+                print "Baditem seen in testset: KC not present in train, item not added to testset"
+                continue
+            self.testdata[i]=(smap[d[0]],d[1],d[2])
         print "missing students/kcs/items vs total"
         print len(self.studentmis),len(self.kcmis),len(self.itemmis),self.nrs,self.nrkc,len(self.ikc)
             
@@ -122,6 +138,16 @@ class edata:
                 print self.labels[i]
             i+=1
 
+    def giveTestData(self):
+        i=0
+        while i<len(self.testdata):
+            yield self.testdata[i]
+#            except:
+#                print "something wrong in giving testdata!"
+#                print i,self.testdata[i],"testdata length",len(self.testdata)
+                
+            i+=1    
+    
     def generate(self,nrs,nrkc,nri):
         self.data=[]
         self.labels=[]
@@ -142,24 +168,28 @@ class edata:
             self.ikc.append(kcs)
         
         
-    def initialize(self,ikc,nrs,nrkc,data=[],labels=[]):
+    def initialize(self,ikc,nrs,nrkc,data=[],labels=[],testdata=[]):
         self.data=data
         self.labels=labels
         self.ikc=ikc
         self.nrs=nrs
         self.nrkc=nrkc
+        self.testdata=testdata
 
-    def initializeCopy(self,other,data=[],labels=[]):
-        self.data=data[:]
-        self.labels=labels[:]
-        self.ikc=other.ikc
+    def initializeCopy(self,other,data=[],labels=[],testdata=[]):
+        self.data=copy.deepcopy(data[:])
+        self.labels=copy.deepcopy(labels[:])
+        self.testdata=copy.deepcopy(testdata[:])
+        self.ikc=copy.deepcopy(other.ikc)
         self.nrs=other.nrs
         self.nrkc=other.nrkc
+
         
         
     def clearData(self):
         self.data=[]
         self.labels=[]
+        self.testdata=[]
 
     def countStudentQuestions(self):
         s=defaultdict(int)
@@ -292,21 +322,6 @@ class edata:
             if max(self.ikc[d[1]])>maxkc:maxkc=max(self.ikc[d[1]])
         print maxs, maxi, maxkc, minkc, self.nrs, self.nrkc
 
-    def splitDataStudent(self,parts):
-        #splits the data in 'parts' # parts, where the records of any user
-        #are all in the same part
-        sets=[]
-        for i in range(parts):
-            sets.append(edata())
-            sets[i].initializeCopy(self)
-        smap=range(self.nrs)
-        r.shuffle(smap)
-        for i in range(len(smap)):
-            smap[i]=smap[i]%parts
-        for dat in self.giveData():
-            sets[smap[dat[0]]].addPoint(dat[0],dat[1],dat[2])
-        return sets
-        
     def splitDataS(self,parts):
         sets=[]
         for i in range(parts):
@@ -339,6 +354,21 @@ class edata:
         return sets
             
             
-        
+    def splitDataStudent(self,parts):
+        #splits the data in 'parts' # parts, where the records of any user
+        #are all in the same part
+        sets=[]
+        for i in range(parts):
+            sets.append(edata())
+            sets[i].initializeCopy(self)
+        smap=range(self.nrs)
+        r.shuffle(smap)
+        for i in range(len(smap)):
+            smap[i]=smap[i]%parts
+        for dat in self.giveData():
+            sets[smap[dat[0]]].addPoint(dat[0],dat[1],dat[2])
+        for dat in self.giveTestData():
+            sets[smap[dat[0]]].testdata.append(dat)
+        return sets
 
         

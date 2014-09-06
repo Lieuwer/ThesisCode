@@ -39,7 +39,7 @@ def main():
         
         models.append(complexModel(datas[i],False))
         if i>0:
-            models[i].setBaseKCCF(models[i-1])
+            models[i].copyBaseKCCF(models[i-1])
         print "training"
         trainerror.append(models[i].fit())
         if i<len(datas)-1:
@@ -47,7 +47,7 @@ def main():
             print "test done"
         else:
             #set kcc
-            models[i].setBaseKCCF(models[i-2])
+            models[i].copyBaseKCCF(models[i-2])
             testerror.append(models[i].useTestset(datas[i-1]))
     tSpearman=np.zeros(len(models[0].giveParams()))
     for nr,model in enumerate(models):

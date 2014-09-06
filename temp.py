@@ -16,25 +16,42 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as stat
 import random as r
+from experiment import experiment
 
-def main():
-    data=edata.load("train.edata")
-    model=afmModel(data,False)
-    model.fit()
-    
-    z=model.determineVariance(5)
-    x=model.covarianceMatrix()
+def main(): 
+#    exp=experiment("pfa","pfa6")
+#    exp.runExperiment(6,10,"train2.edata")
+#    exp.save("exp1.exp")
+#    print "-------next experiment-----"        
+    exp=experiment.load("exp1.exp")
+    exp.determineStds()
+     
+    #29-8-14
+#    data=edata.load("train2.edata")
+#    model=afmModel(data,False)
+#    model.fit()
+#    model.aprime()
+    #z=model.determineVariance(5)
+    #x=model.covarianceMatrix()
     #print z[682],z[683],x.shape,len(z)
     #682 & 683 removed to obtain covariance matrix
     #z=np.delete(z,[682,683])
-    for i in range(x.shape[1]):
-        print i,z[i],z[i]-x[i,i]**.5
-    check=0     
+    #for i in range(x.shape[1]):
+    #    print i,z[i],z[i]-x[i,i]**.5
+    #check=0     
 
+""" 
+    data=edata.load("train2.edata")
+    model=afmModel(data,False)
+    model.fit()
+    model.aPrime()
+    bl = baseline(data)
+    bl.fit()
+    bl.aPrime()
+    model.determineVariance(5)
         
     
 
-""" 
 #----------------------11-8-14------------------#
 
 #    data=edata.load("train.edata")
@@ -93,7 +110,7 @@ def main():
     for s in range(nrs):
         #Number of questions answered by student,
         nrans=r.normalvariate(qs,5)
-        if nrans<1:
+        if nrans<1:['crimson', 'burlywood','chartreuse']
             sq.append(1)    
         else:
             sq.append(int(nrans))
@@ -123,6 +140,38 @@ def main():
 #    print genmodel.spearman(genmodel)
 #    print genmodel.spearman(model1)
 """
+
+def aprime(predict,labels):
+    #Does not yet take into account the issue that there is dependancy between some of the data
+    correct=[0]*sum(labels)
+    incorrect=[0]*(len(labels)-len(correct))
+    c=n=0
+    error=0.0
+    cor=0.0
+    for i in range(len(labels)):
+        if labels[i]:
+            if predict[i]>=.5:cor+=1
+            correct[c]=predict[i]
+            c+=1
+            error-=np.log(1-predict[i])
+        else:
+            if predict[i]<.5:cor+=1
+            incorrect[n]=predict[i]
+            n+=1
+            error-=np.log(predict[i])
+    total=0.0
+## should make an n log n implementation of this, including a heuristic to have the larger value in the log
+#    for yes in correct:
+#        for no in incorrect:
+#            if yes>no:
+#                total+=1
+
+    print "error=", error/len(labels)
+    print "accuracy=", cor/len(labels)
+    print "a-prime=", total/(len(correct)*len(incorrect))
+    print "corrects",len(correct)/float(len(correct)+len(incorrect)), sum(correct)/len(correct)
+    print "incorrects", len(incorrect), sum(incorrect)/len(incorrect)
+    return total/(len(correct)*len(incorrect))
 
 if __name__ == "__main__":
     t0=time.time()

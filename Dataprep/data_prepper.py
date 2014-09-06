@@ -35,6 +35,7 @@ def main():
     sid={}
     data=[]
     labels=[]
+    testdata=[]
     for line in f:
         parts=line.split('\t')
         addkc=False
@@ -112,17 +113,17 @@ def main():
         print k,v
 #    for kc in kcs.keys():
 #        print kc
+    
     datafile=edata()
     datafile.initialize(ikc, len(sid),len(kcsmap),data,labels)
     datafile.save("train.edata")
-
     
     f = open(testfile, 'r')
     # get rid of headers
     f.readline()
     #clear all data
-    data=[]
-    labels=[]
+    testdata=[]
+    
     skipcount=0
     for line in f:
         parts=line.split('\t')
@@ -163,12 +164,11 @@ def main():
                 kcs[kc]+=1
             ikc.append(kclist)
             kcq[kccount]+=1
-        data.append((sid[parts[1]],items[parts[3]][parts[5]]))
-        labels.append(int(parts[13]))
+        testdata.append((sid[parts[1]],items[parts[3]][parts[5]],int(parts[13])))
     print "Number of records: ", len(data) ," records skipped: " ,skipcount
-    testdata=edata()    
-    testdata.initialize(ikc, len(sid),len(kcsmap),data,labels)
-    testdata.save("test.edata")
+    dataset=edata()    
+    dataset.initialize(ikc, len(sid),len(kcsmap),data,labels,testdata)
+    dataset.save("train2.edata")
 
             
 if __name__ == '__main__':

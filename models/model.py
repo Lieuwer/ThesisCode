@@ -9,38 +9,9 @@ import random as r
 import scipy.stats as stat
 import numpy as np
 import copy
+import time
+import datetime
 
-def aprime(predict,labels):
-    #Does not yet take into account the issue that there is dependancy between some of the data
-    correct=[0]*sum(labels)
-    incorrect=[0]*(len(labels)-len(correct))
-    c=n=0
-    error=0.0
-    cor=0.0
-    for i in range(len(labels)):
-        if labels[i]:
-            if predict[i]>=.5:cor+=1
-            correct[c]=predict[i]
-            c+=1
-            error-=np.log(1-predict[i])
-        else:
-            if predict[i]<.5:cor+=1
-            incorrect[n]=predict[i]
-            n+=1
-            error-=np.log(predict[i])
-    total=0.0
-## should make an n log n implementation of this, including a heuristic to have the larger value in the log
-#    for yes in correct:
-#        for no in incorrect:
-#            if yes>no:
-#                total+=1
-
-    print "error=", error/len(labels)
-    print "accuracy=", cor/len(labels)
-    print "a-prime=", total/(len(correct)*len(incorrect))
-    print "corrects",len(correct)/float(len(correct)+len(incorrect)), sum(correct)/len(correct)
-    print "incorrects", len(incorrect), sum(incorrect)/len(incorrect)
-    return total/(len(correct)*len(incorrect))
 
 class model(object):
     def save(self, filename):
@@ -55,13 +26,13 @@ class model(object):
         
     def parameterVariance(self,parname):
         try:
-            if parname=="t":
+            if parname=="theta0":
                 return np.var(self.st)
-            if parname=="b":
+            if parname=="beta":
                 return np.var(self.cb)
-            if parname=="g":
+            if parname=="gamma":
                 return np.var(self.cg)
-            if parname=="r":
+            if parname=="ro":
                 return np.var(self.cr)
         except:
             print "Error, this parameter doesn't exist in the model, thus variance cannot be given"
@@ -73,6 +44,11 @@ class model(object):
         self.kcf=self.basekcf.copy()
     
     def setBaseKCCF(self,other):
+        #basekccf's need to be implemented into fit procedure of models as well in order to work!
+        self.basekcc=self.kcc.copy()
+        self.basekcf=self.kcf.copy()
+    
+    def copyBaseKCCF(self,other):
         self.basekcc=other.kcc.copy()
         self.basekcf=other.kcf.copy()
         self.kcc=self.basekcc.copy()
@@ -92,16 +68,23 @@ class model(object):
         else:
             self.data.addPoint(s,i,0)
             self.genError-=np.log(p)
+            
+    def generateTest(self,s,i):
+        p = self.predict(s,i)
+        if r.random()<p:
+            self.data.testdata.append((s,i,1))
+        else:
+            self.data.testdata.append((s,i,0))
 
     def giveGenError(self):
         return self.genError/len(self.data.data)
     
-    def useTestset(self,testdata):
-        predictions=[]
-        self.ikc=testdata.ikc
-        for d in testdata.giveData():
-            predictions.append(self.predict(d[0],d[1]))
-        return aprime(predictions,testdata.labels)
+#    def useTestset(self,testdata):
+#        predictions=[]
+#        self.ikc=testdata.ikc
+#        for d in testdata.giveData():
+#            predictions.append(self.predict(d[0],d[1]))
+#        return aprime(predictions,testdata.labels)
     
     def giveParams(self):
         return self.parameters
@@ -153,20 +136,53 @@ class model(object):
             othermodel.clearGenerate()
             for d in self.data.giveData():
                 othermodel.generate(d[0],d[1])
+            #This is not yet correct?, as it the basekcc needs to be set at this point and the kcc reset once the testdata has been made.
+            
+            for d in self.data.giveTestData():
+                othermodel.generateTest(d[0],d[1])
             othermodel.fit()
+#            othermodel.aPrime()
             for j,p in enumerate(othermodel.giveParams()):
                 params[j][i,:]=p
         variances=[]
         for i in range(len(self.parameters)):
             avg=np.mean(params[i],0)
-            var=np.var(params[i],0)
+            var=np.var(params[i],0,ddof=1)
             variances.append(var)
 #            print ""
 #            print self.paranames[i]
 #            for j in range(params[i].shape[1]):
 #                print j,avg[j],var[j]
-        variances=np.concatenate(variances)
+        #variances=np.concatenate(variances)
         return variances
             
-    
+    def aPrime(self):
+        #Doesn't take into account that elements in the test set might be dependant
+        t=time.time()
+        error=[]
+        correct=[]
+        incorrect=[]
+        for d in self.data.giveTestData():
+            p=self.predict(d[0],d[1])
+            if d[2]:
+                correct.append(p)
+                error.append(1-p)
+            else:
+                incorrect.append(p)
+                error.append(p)
+        correct.sort()
+        incorrect.sort()
+        aTotal=0
+        i=0
+        j=0
+        while(i<len(correct)):
+            while(j<len(incorrect) and correct[i]>incorrect[j]):
+                j+=1
+            aTotal+=j
+            i+=1
+        print "Unadjusted aprime=", float(aTotal)/(len(incorrect)*len(correct))
+        print "Average error=", np.mean(error)
+        print "Error percentage=", np.mean(np.round(error))
+        print "Time taken for accuracies", str(datetime.timedelta(seconds=(time.time()-t)))
+        return float(aTotal)/(len(incorrect)*len(correct))
     
