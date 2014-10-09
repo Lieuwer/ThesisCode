@@ -8,12 +8,8 @@ from collections import defaultdict
 
 def main():
     trainfile="D:\\scriptie\\Thesisdata\\gong3\\PFA_train_with_splitting.csv"
-    testsfile="D:\\scriptie\\Thesisdata\\gong\\student_pretest_posttest.csv"
+    testsfile="D:\\scriptie\\Thesisdata\\gong3\\PFA_test_with_splitting.csv"
     f = open(trainfile, 'r')
-    #Steps will count for each item, how often it occurs
-    steps={}
-    #kcs counts for every kc how often it occurs
-    kcs=defaultdict(int)
     #kcq counts how many questions are associated with a certain number of kcs (the key)
     kcq=defaultdict(int)
     #First line has the headers
@@ -21,48 +17,92 @@ def main():
     for n,p in enumerate(line.split(',')):
         print n, p
     #ikc links question # to KC #
-    ikc={}
-    icounter=0
+    ikc=[]
     #kcsmap maps a written kc to a unique number
     kcsmap={}
-    #items maps a problem name plus step name to a unique item number
-    items=defaultdict(int)
+    #items maps an item to a number
+    imap={}
     #sid maps a student to a int id
-    sid=defaultdict(int)
-    kcs=defaultdict(int)
+    sid={}
     data=[]
     labels=[]
-    additional=0
     total = 0
 
-    check=defaultdict(int)    
+  
     
+    previous=-1
     for line in f:
         total+=1
         parts=line.split(',')
-        sid[int(parts[1])]+=1
-        item=int(parts[4])
-        items[item]+=1
-        skill=int(parts[0])
-        kcs[skill]+=1
-        if not ikc.has_key(item):
-            ikc[item]=[skill]
-        elif not skill in ikc[item]:
-            ikc[item].append(skill)
-            additional+=1
+        if not previous==int(parts[3]):
+            if not int(parts[1]) in sid.keys():
+                sid[int(parts[1])]=len(sid.keys())
+            if not int(parts[4]) in imap.keys():
+                imap[int(parts[4])]=len(imap.keys())
+                ikc.append([])
+            item=imap[int(parts[4])]
+            if not int(parts[0]) in kcsmap.keys():
+                kcsmap[int(parts[0])]=len(kcsmap.keys())
+            kc=kcsmap[int(parts[0])]
+            if not kc in ikc[item]:
+                ikc[item].append(kc)
+            data.append((sid[int(parts[1])],item))
+            labels.append(int(parts[2]))
+        if not int(parts[0]) in kcsmap.keys():
+            kcsmap[int(parts[0])]=len(kcsmap.keys())
+        kc=kcsmap[int(parts[0])]
+        if not kc in ikc[item]:
+            ikc[item].append(kc)
+        previous=int(parts[3])
 
-    print "total records", total
+
+    f=open(testsfile,'r')
+    #First line has the headers
+    line=f.readline()
+    previous=-1
+    for line in f:
+        total+=1
+        parts=line.split(',')
+        if not previous==int(parts[3]):
+            if not int(parts[1]) in sid.keys():
+                sid[int(parts[1])]=len(sid.keys())
+            if not int(parts[4]) in imap.keys():
+                imap[int(parts[4])]=len(imap.keys())
+                ikc.append([])
+            item=imap[int(parts[4])]
+            if not int(parts[0]) in kcsmap.keys():
+                kcsmap[int(parts[0])]=len(kcsmap.keys())
+            kc=kcsmap[int(parts[0])]
+            if not kc in ikc[item]:
+                ikc[item].append(kc)
+            data.append((sid[int(parts[1])],item))
+            labels.append(int(parts[2]))
+        if not int(parts[0]) in kcsmap.keys():
+            kcsmap[int(parts[0])]=len(kcsmap.keys())
+        kc=kcsmap[int(parts[0])]
+        if not kc in ikc[item]:
+            ikc[item].append(kc)
+        previous=int(parts[3])
+    f.close()
+    print "total records/datapoints", total, len(data)
     print "number students", len(sid.keys())
-    print "number of items", len(items.keys())
-    print "number of kcs", len(kcs.keys())
-    print "Added skills", additional
+    print "number of items", len(imap.keys())
+    print "number of kcs", len(kcsmap)
     kcq=defaultdict(int)
-    for l in ikc.values():
+    for l in ikc:
         kcq[len(l)]+=1
     for k,v in kcq.iteritems():
         print "number of items per kc versus occurences", k,v
     f.close()
+    
+    
+    dataset=edata()    
+    dataset.initialize(ikc, len(sid),len(kcsmap),data,labels)
+    dataset.save("gong.edata")
+    
+#    print "The length of testdata", len(testdata)
 '''
+    testsfile="D:\\scriptie\\Thesisdata\\gong\\student_pretest_posttest.csv"
     f=open(testsfile,'r')
     #First line has the headers
     line=f.readline()

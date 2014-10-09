@@ -163,6 +163,11 @@ class afmModel(model):
                     totalerror+=1
         print "about to fit model"
         model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1',C=10^9)
+        if sum(labels)==0 or sum(labels)==len(labels):
+            print "about to die!"
+            print "corrects / Total data", sum(labels), len(labels)
+            
+        
         model.fit(studentdata,labels)
         print "Copying parameters"        
         self.st[:]=model.coef_[0][:nrs]

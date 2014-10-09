@@ -44,7 +44,7 @@ class model(object):
         self.kcf=self.basekcf.copy()
     
     def setBaseKCCF(self,other):
-        #basekccf's need to be implemented into fit procedure of models as well in order to work!
+        #basekccf's need to be implemented into fit procedure of each model as well in order to work!
         self.basekcc=self.kcc.copy()
         self.basekcf=self.kcf.copy()
     
@@ -111,9 +111,21 @@ class model(object):
         self.parameters.append(par)
     
     def spearman(self, other):
-        answerlist=np.zeros(len(self.parameters))
+        #A bit of a hack momentarily which works for AFM and PFA. Only looks at KC parameters
+        answerlist=np.zeros(len(self.parameters)-1)
         for i in range(len(answerlist)):
-            answerlist[i]=stat.spearmanr(self.parameters[i],other.parameters[i])[0]
+            pars1=[]
+            pars2=[]
+            skip1=skip2=0
+            for j in range(len(self.parameters[0])+len(self.data.kcmis)):
+                if j in self.data.kcmis:
+                    skip1+=1
+                if j in other.data.kcmis:
+                    skip2+=1
+                if not (j in self.data.kcmis or j in other.data.kcmis):
+                    pars1.append(self.parameters[i][j-skip1])
+                    pars2.append(other.parameters[i][j-skip2])
+            answerlist[i]=stat.spearmanr(pars1,pars2)[0]
         return answerlist
     
     def nrParams(self):
@@ -131,15 +143,17 @@ class model(object):
         for i in range(len(self.parameters)):      
             params.append(np.zeros((runs,len(self.parameters[i]))))
         othermodel=copy.deepcopy(self)
+        othermodel.basekcc=np.zeros((self.data.nrs,self.data.nrkc))
+        othermodel.basekcf=np.zeros((self.data.nrs,self.data.nrkc))
         for i in range(runs):
-            
             othermodel.clearGenerate()
             for d in self.data.giveData():
                 othermodel.generate(d[0],d[1])
-            #This is not yet correct?, as it the basekcc needs to be set at this point and the kcc reset once the testdata has been made.
+            print len(self.data)
+            #Testpart is not yet correct?, as it the basekcc needs to be set at this point and the kcc reset once the testdata has been made.            
+#            for d in self.data.giveTestData():
+#                othermodel.generateTest(d[0],d[1])
             
-            for d in self.data.giveTestData():
-                othermodel.generateTest(d[0],d[1])
             othermodel.fit()
 #            othermodel.aPrime()
             for j,p in enumerate(othermodel.giveParams()):

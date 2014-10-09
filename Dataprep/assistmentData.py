@@ -18,8 +18,13 @@ def main():
     kcq=defaultdict(int)
     #First line has the headers
     line=f.readline()
+    parts=line.split(',')
+    line=f.readline()
+    parts2=line.split(',')
+    for n,part in enumerate (parts):
+        print n,part, parts2[n]
     #ikc links question # to KC #
-    ikc={}
+    ikc=[]
     icounter=0
     #kcsmap maps a written kc to a unique number
     kcsmap={}
@@ -33,36 +38,75 @@ def main():
     kcitems=0
     additional=0
     total = 0
+    
+    data=[]
+    labels=[]
+    smap={}
+    kcmap={}
+    imap ={}   
+    
     for line in f:
         total+=1
         parts=line.split(',')
-        sid[int(parts[2])]+=1
-        item=int(parts[4])
-        items[item]+=1
-        if len(parts[16])>0:
-            if items[item]==1: kcitems+=1
-            existing=True
-            for p in parts[16].split(';'):
-                skill=int(p)
-                kcs[skill]+=1
-                if not ikc.has_key(item):
-                    ikc[item]=[skill]
-                    existing=False
-                elif not skill in ikc[item]:
-                    ikc[item].append(skill)
-                    if existing:
-                        additional+=1
+        if not smap.has_key(int(parts[2])):
+            smap[int(parts[2])]=len(sid)
+        if not imap.has_key(int(parts[4])):
+            imap[int(parts[4])]=len(imap.keys())
+            ikc.append([])
+            if len(parts[16])>0:
+                for p in parts[16].split(';'):
+                    if not kcmap.has_key(int(p)):
+                        kcmap[int(p)]=len(kcmap)
+                    ikc[imap[int(parts[4])]].append(kcmap[int(p)])
+            elif len(parts[17])>2:
+                print "\nEven though there are no skill Id's we still have skills!!!!\n"
+        if len(ikc[imap[int(parts[4])]])>0:
+
+            data.append((smap[int(parts[2])],imap[int(parts[4])]))
+            label=float(parts[6])
+            if label<1.0:
+                label=0
+            else:
+                label=1
+            labels.append(label)
+#        sid[int(parts[2])]+=1
+#        item=int(parts[4])
+#        items[item]+=1
+#        if len(parts[16])>0:
+#            if items[item]==1: kcitems+=1
+#            existing=True
+#            for p in parts[16].split(';'):
+#                skill=int(p)
+#                kcs[skill]+=1
+#                if not ikc.has_key(item):
+#                    ikc[item]=[skill]
+#                    existing=False
+#                elif not skill in ikc[item]:
+#                    ikc[item].append(skill)
+#                    if existing:
+#                        additional+=1
+    empty=0
+    for l in ikc:
+        if len(l)==0:
+            empty+=1
     print "total records", total
-    print "number students", len(sid.keys())
-    print "number of items / items with kcs", len(items.keys()), kcitems
-    print "number of kcs", len(kcs.keys())
-    print "Added skills", additional
+    print "number students", len(smap)
+    print "number of items / items with kcs", len(ikc), empty
+    #without rechecking
+    print "number of kcs", len(kcmap)
+#    print "Added skills", additional
     kcq=defaultdict(int)
-    for l in ikc.values():
+    for l in ikc:
         kcq[len(l)]+=1
     for k,v in kcq.iteritems():
         print "number of items per kc versus occurences", k,v
     f.close()
+    
+    dataset=edata()    
+    dataset.initialize(ikc, len(smap),len(kcmap),data,labels)
+    dataset.save("assistment.edata")
+    
+    print "correct versus total data:", sum(labels),len(data)
 '''
     f=open(testsfile,'r')
     #First line has the headers
@@ -71,7 +115,7 @@ def main():
     out=0
     for line in f:
         parts=line.split(',')
-        if int(parts[0]) in sid:
+        if int(parts[0]) in smap.keys:
             ins+=1
         else:
             out+=1

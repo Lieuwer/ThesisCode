@@ -13,8 +13,8 @@ from collections import defaultdict
 
 
 def main():
-    trainfile="D:\\scriptie\\Thesisdata\\algebra_2005_2006\\algebra_2005_2006_train.csv"
-    testfile="D:\\scriptie\\Thesisdata\\algebra_2005_2006\\algebra_2005_2006_master.csv"
+    trainfile="D:\\scriptie\\Thesisdata\\bridge_to_algebra_2006_2007\\bridge_to_algebra_2006_2007_train.txt"
+    testfile="D:\\scriptie\\Thesisdata\\bridge_to_algebra_2006_2007\\bridge_to_algebra_2006_2007_master.txt"
     f = open(trainfile, 'r')
     #Steps will count for each item, how often it occurs
     steps={}
@@ -165,10 +165,10 @@ def main():
             ikc.append(kclist)
             kcq[kccount]+=1
         testdata.append((sid[parts[1]],items[parts[3]][parts[5]],int(parts[13])))
-    print "Number of records: ", len(data) ," records skipped: " ,skipcount
+    print "Number of records: ", len(testdata) ," records skipped: " ,skipcount
     dataset=edata()    
     dataset.initialize(ikc, len(sid),len(kcsmap),data,labels,testdata)
-    dataset.save("train2.edata")
+    dataset.save("bridge.edata")
 
             
 if __name__ == '__main__':

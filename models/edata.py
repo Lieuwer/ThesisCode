@@ -3,6 +3,7 @@ import cPickle as pickle
 import random as r
 from collections import defaultdict
 import copy
+import time,datetime
 
 #Go from a cumulative distribution list to determine what kc's are
 #linked to what item
@@ -60,7 +61,7 @@ class edata:
         self.itemmis=[]
         self.studentmis=[]
     
-    def createMissing(self):
+    def removeNotSeen(self):
         iseen=defaultdict(int)
         kcseen=defaultdict(int)
         sseen=defaultdict(int)
@@ -78,6 +79,55 @@ class edata:
         for i in range(len(self.ikc)):
             if not iseen[i]:
                 self.itemmis.append(i)
+        print "missing students/kcs/items vs total"
+        print len(self.studentmis),len(self.kcmis),len(self.itemmis),self.nrs,self.nrkc,len(self.ikc)
+        self.removeData()
+        
+        
+    def forgetMapping(self):
+        self.updateMapping()
+        self.studentmis=[]
+        self.kcmis=[]
+        self.itemmis=[]
+        
+    def removeData(self):
+        t=time.time()
+        #Remove all the data corresponding to missing students and KC's
+        self.studentmis=list(set(self.studentmis))
+        self.kcmis=list(set(self.kcmis))
+        self.itemmis=list(set(self.itemmis)) 
+        for i in range(len(self.ikc)):
+            kclist=[]
+            for kc in self.ikc[i]:
+                if kc not in self.kcmis:
+                    kclist.append(kc)
+            self.ikc[i]=kclist
+            if len(self.ikc[i])==0:
+                self.itemmis.append(i)
+        remove=[]
+        for i,d in enumerate(self.giveData()):
+            if d[0] in self.studentmis or len(self.ikc[d[1]])==0:
+                remove.append(i)
+        remove.sort(reverse=True)
+        for i in remove:
+            self.data.pop(i)
+            self.labels.pop(i)
+        removeFromTestSet=[]        
+        for i,d in enumerate(self.giveTestData()):
+            if len(self.ikc[d[1]])==0:
+                removeFromTestSet.append(i)
+        removeFromTestSet.sort(reverse=True)
+        for i in removeFromTestSet:
+            self.testdata.pop(i)
+        
+        print "Time taken by removeData", str(datetime.timedelta(seconds=(time.time()-t)))
+        
+    def updateMapping(self):
+        #This method does a remapping of the student and KC id's. No missing stuff should be added after this method is run!
+        t=time.time()
+        self.studentmis=list(set(self.studentmis))
+        self.kcmis=list(set(self.kcmis))
+        self.itemmis=list(set(self.itemmis))        
         smap=[-1]*self.nrs
         skip=0
         for i in range(self.nrs):
@@ -94,33 +144,22 @@ class edata:
                 skip+=1
         self.nrs-=len(self.studentmis)
         self.nrkc-=len(self.kcmis)
-        #Not really implemented yet
-        newikc=[]
         for i in range(len(self.ikc)):
 #            if i in self.itemmis:
 #                continue
             kclist=[]
             for kc in self.ikc[i]:
-                kclist.append(kcmap[kc])
+                if kc not in self.kcmis:
+                    kclist.append(kcmap[kc])
             self.ikc[i]=kclist
-            newikc.append(kclist)
-        #self.ikc=newikc
         for i in range(len(self.data)):
             d=self.data[i]
-            self.data[i]=(smap[d[0]],d[1])
+            self.data[i]=(smap[d[0]],d[1])  
         for i in range(len(self.testdata)):
             d=self.testdata[i]
-            baditem=False
-            for kc in self.ikc[d[1]]:
-                if kc in self.kcmis:
-                    baditem=True
-            if baditem:
-                print "Baditem seen in testset: KC not present in train, item not added to testset"
-                continue
             self.testdata[i]=(smap[d[0]],d[1],d[2])
-        print "missing students/kcs/items vs total"
-        print len(self.studentmis),len(self.kcmis),len(self.itemmis),self.nrs,self.nrkc,len(self.ikc)
-            
+        print "Time taken by updateData", str(datetime.timedelta(seconds=(time.time()-t)))
+
     
     def addPoint(self,s,i,c):
         #Add a point, with student s, item i, and correctness c
@@ -192,13 +231,13 @@ class edata:
         self.testdata=[]
 
     def countStudentQuestions(self):
-        s=defaultdict(int)
+        s=[0]*self.nrs
         for d in self.data:
             s[d[0]]+=1
         return s
     
     def countKCQuestions(self):
-        s=defaultdict(int)
+        s=[0]*self.nrkc
         for d in self.data:
             for kc in self.ikc[d[1]]:
                 s[kc]+=1
@@ -213,155 +252,67 @@ class edata:
     def removesq(self,nr):
         #Remove all students that answered less then nr questions
         sq=self.countStudentQuestions()
-        removeS=[]
-        smap={}
+        for i,n in enumerate(sq):
+            if n<nr:
+                self.studentmis.append(i)
+        self.removeData()
         
-        jump=0
-        for i in range(max(sq.keys())+1):
-            if sq[i]<nr:
-                if not sq[i]==0:
-                    removeS.append(i)
-                jump+=1
-            else:
-                smap[i]=i-jump
-        print len(removeS),len(sq),max(sq.keys())
-        newData=[]
-        newLabels=[]
-        #enumerate leads to problems
-        for i in range(len(self.data)):
-            d=self.data[i]
-            if d[0] not in removeS:
-                newData.append((smap[d[0]],d[1]))
-                newLabels.append(self.labels[i])
-        self.data=newData
-        self.labels=newLabels
-        self.nrs=max(sq.keys())+1-jump
-        self.updateItemMap()
-        
-    
     def removekcq(self,nr):
-        updateData=False
         kcq=self.countKCQuestions()
-        removeKC=[]
-        removei=[]
-        kcmap={}
-        jump=0
-        for i in range(max(kcq.keys())+1):
-            if kcq[i]<nr:
-                jump+=1
-                if not kcq[i]==0:
-                    removeKC.append(i)
-            else:
-                kcmap[i]=i-jump
-        print len(removeKC),max(kcq.keys())
-        for i in range(len(self.ikc)):
-            for kc in removeKC:
-                if kc in self.ikc[i]:
-                    self.ikc[i].remove(kc)
-            if len(self.ikc[i])==0:
-                removei.append(i)
-                updateData=True
-            for j in range(len(self.ikc[i])):
-                self.ikc[i][j]=kcmap[self.ikc[i][j]]
-        print self.nrkc,len(removeKC)
-        self.nrkc=max(kcq.keys())+1-jump
-
-        if updateData:
-            newData=[]
-            newLabels=[]
-            #enumerate leads to error, so...
-            i=0
-            for d in self.data:
-                if d[1] not in removei:
-                    newData.append(d)
-                    newLabels.append(self.labels[i])
-                i+=1
-            self.data=newData
-            self.labels=newLabels
-            self.updateItemMap()
-               
-
-    def updateItemMap(self):
-        it=self.countItemQuestions()
-        jump=0
-        
-        for i in range(len(self.ikc)):
-            if it[i]==0:
-                jump+=1
-            else:
-                it[i]=i-jump
-                self.ikc[i-jump]=self.ikc[i]
-        for i in range(jump):
-            self.ikc.pop(-1)
-        newData=[]
-        newLabels=[]
-        #enumerate leads to problems
-        
-        for i in range(len(self.data)):
-            d=self.data[i]
-            newData.append((d[0],it[d[1]]))
-            newLabels.append(self.labels[i])    
-        self.data=newData
-        self.labels=newLabels
+        for i,n in enumerate(kcq):
+            if n<nr:
+                self.kcmis.append(i)
+        self.removeData()                
 
     def removekcsq(self,nrk,nrs):
+        #remove students and kc's for which there aren't at least nrk and nrs questions respectively
         oldlen=0
         while (oldlen!=len(self.data)):
             oldlen=len(self.data)
             self.removesq(nrs)
             self.removekcq(nrk)
-        
-        maxkc=0
-        maxs=0
-        maxi=0
-        minkc=10
-        for d in self.data:
-            if d[0]>maxs: maxs=d[0]
-            if d[1]>maxi: maxi=d[1]
-            if len(self.ikc[d[1]])<minkc: minkc=len(self.ikc[d[1]])
-            if max(self.ikc[d[1]])>maxkc:maxkc=max(self.ikc[d[1]])
-        print maxs, maxi, maxkc, minkc, self.nrs, self.nrkc
-
-    def splitDataS(self,parts):
-        sets=[]
-        for i in range(parts):
-            sets.append(edata())
-            sets[i].initializeCopy(self)
-        sq=self.countStudentQuestions()
-        print "checking:",sum(sq.values()),len(self.data)
-        skip=0
-        dCounter=0
-        for i in range(max(sq.keys())+1):
-            #every part gets an equal part from every student and a rest is left
-            perS=sq[i]/parts
-            rest=sq[i]%parts
-            for j in range(parts):
-                if ((j+skip)%parts)<rest: extra=1
-                else: extra = 0
-                for k in range(perS+extra):
-                    sets[j].data.append(self.data[dCounter])
-                    sets[j].labels.append(self.labels[dCounter])
-                    
-                    
-                    if self.data[dCounter][0] != i:
-                        print i,self.data[dCounter][0]
-                        print "Student being processed and in data don't match!"
-                    dCounter+=1
-            skip=(skip+rest)%parts
-        for i in range(parts):
-            kc=sets[i].countKCQuestions()
-            print max(kc), len(kc),self.nrkc, len(self.data)            
-        return sets
+# If to be used again, first needs to be adapted to current way of working!
+#    def splitDataS(self,parts):
+#        #split data of students, such that the first answers of each student are in the first part etc.
+#        sets=[]
+#        for i in range(parts):
+#            sets.append(edata())
+#            sets[i].initializeCopy(self)
+#        sq=self.countStudentQuestions()
+#        print "checking:",sum(sq.values()),len(self.data)
+#        skip=0
+#        dCounter=0
+#        for i in range(max(sq.keys())+1):
+#            #every part gets an equal part from every student and a rest is left
+#            perS=sq[i]/parts
+#            rest=sq[i]%parts
+#            for j in range(parts):
+#                if ((j+skip)%parts)<rest: extra=1
+#                else: extra = 0
+#                for k in range(perS+extra):
+#                    sets[j].data.append(self.data[dCounter])
+#                    sets[j].labels.append(self.labels[dCounter])
+#                    
+#                    
+#                    if self.data[dCounter][0] != i:
+#                        print i,self.data[dCounter][0]
+#                        print "Student being processed and in data don't match!"
+#                    dCounter+=1
+#            skip=(skip+rest)%parts
+#        for i in range(parts):
+#            kc=sets[i].countKCQuestions()
+#            print max(kc), len(kc),self.nrkc, len(self.data)            
+#        return sets
             
             
     def splitDataStudent(self,parts):
         #splits the data in 'parts' # parts, where the records of any user
-        #are all in the same part
+        #are all in the same part.
         sets=[]
         for i in range(parts):
             sets.append(edata())
             sets[i].initializeCopy(self)
-        smap=range(self.nrs)
+        smap=range(self.nrs-len(self.studentmis))
         r.shuffle(smap)
         for i in range(len(smap)):
             smap[i]=smap[i]%parts
@@ -371,4 +322,51 @@ class edata:
             sets[smap[dat[0]]].testdata.append(dat)
         return sets
 
+    def studentCheck(self,minq):
+        #Removes those students for which there are only correct or incorrect answers to questions. Students removed are not remembered if forget is true!
+        correct=[0]*self.nrs
+        incorrect=[0]*self.nrs
+        for d in self.giveData():
+            if d[2]:
+                correct[d[0]]+=1
+            else:
+                incorrect[d[0]]+=1
+        for i in range(self.nrs):
+            if correct[i]<minq or incorrect[i]<minq:
+                self.studentmis.append(i)
+                #print "student dropped due to no solution", i
+        self.removeData()
+
         
+                
+    def KCCheck(self,minq):
+        kcc=[0]*self.nrkc
+        kcf=[0]*self.nrkc
+        for d in self.giveData():
+            for kc in self.ikc[d[1]]:
+                if [d[2]]:
+                    kcc[kc]+=1
+                else:
+                    kcf[kc]+=1
+        for i in range(self.nrkc):
+            if kcc[i]<minq and kcf[i]<minq and not i in self.kcmis:
+                self.kcmis.append(i)
+                print "KC dropped", i
+        self.removeData()
+
+    def beforeSplitCleaning(self):
+        self.studentCheck(1)
+        self.forgetMapping()
+        
+    def splitCleaning(self):
+        t=time.time()
+        oldlen=0
+        while (not oldlen==len(self.data)):
+            self.KCCheck(2)
+            self.studentCheck(1)
+            oldlen=len(self.data)
+        olds=self.nrs
+        oldkc=self.nrkc
+        self.updateMapping()
+        print "Time taken by splitcleaning", str(datetime.timedelta(seconds=(time.time()-t)))
+        print "Removed %i students and %i kcs"%(olds-self.nrs, oldkc-self.nrkc)

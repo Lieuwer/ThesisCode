@@ -18,14 +18,28 @@ import scipy.stats as stat
 import random as r
 from experiment import experiment
 
-def main(): 
-#    exp=experiment("pfa","pfa6")
-#    exp.runExperiment(6,10,"train2.edata")
-#    exp.save("exp1.exp")
-#    print "-------next experiment-----"        
-    exp=experiment.load("exp1.exp")
-    exp.determineStds()
-     
+def main():
+#    np.seterr(all="raise")
+#    models=["afm","pfa"]
+#    splits=[6,8,12,16,32]
+#    for split in splits:
+#        for model in models:
+#            print "\nStarting experiment:", model,split
+##            exp=experiment.load(model+str(split)+"exp.exp")
+#            exp=experiment(model,model+str(split))
+#            exp.runExperiment(split,10,"gong.edata")
+#            exp.determineStds()
+
+    exp=experiment.load("afm6exp.exp")
+#    print exp.mainmodel.data.nrs
+#    exp.spearman()
+    exp.determineStds()         
+
+
+#    exp=experiment("afm","afm"+str(6))
+#    exp.runExperiment(6,10,"bridge.edata")
+#    exp.determineStds()
+
     #29-8-14
 #    data=edata.load("train2.edata")
 #    model=afmModel(data,False)

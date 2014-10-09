@@ -42,3 +42,4 @@ nosetests.xml
 *.pmodel
 *.emodel
 *.amodel
+*.info
