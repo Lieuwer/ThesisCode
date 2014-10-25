@@ -15,6 +15,8 @@ from collections import defaultdict
 def main():
     trainfile="D:\\scriptie\\Thesisdata\\bridge_to_algebra_2006_2007\\bridge_to_algebra_2006_2007_train.txt"
     testfile="D:\\scriptie\\Thesisdata\\bridge_to_algebra_2006_2007\\bridge_to_algebra_2006_2007_master.txt"
+#    trainfile="D:\\scriptie\\Thesisdata\\algebra_2005_2006\\algebra_2005_2006_train.csv"
+#    testfile="D:\\scriptie\\Thesisdata\\algebra_2005_2006\\algebra_2005_2006_master.csv"
     f = open(trainfile, 'r')
     #Steps will count for each item, how often it occurs
     steps={}
@@ -113,24 +115,18 @@ def main():
         print k,v
 #    for kc in kcs.keys():
 #        print kc
-    
-    datafile=edata()
-    datafile.initialize(ikc, len(sid),len(kcsmap),data,labels)
-    datafile.save("train.edata")
-    
+
     f = open(testfile, 'r')
     # get rid of headers
     f.readline()
-    #clear all data
-    testdata=[]
-    
-    skipcount=0
+
+
     for line in f:
         parts=line.split('\t')
+        addkc=False
+        if len(parts[17])<3: continue
         if not sid.has_key(parts[1]):
-            print "Warning: student not seen", parts[1]
-            skipcount+=1
-            continue
+            sid[parts[1]]=len(sid)
         if steps.has_key(parts[3]):
             if steps[parts[3]].has_key(parts[5]):
                 steps[parts[3]][parts[5]]+=1
@@ -146,6 +142,7 @@ def main():
             steps[parts[3]][parts[5]]=1
             items[parts[3]][parts[5]]=icounter
             icounter+=1
+        
         kccount=0
         if addkc:
             kclist=[]
@@ -162,14 +159,37 @@ def main():
                     kcsmap[kc]=len(kcs)
                 kclist.append(kcsmap[kc])
                 kcs[kc]+=1
+#            if len(kclist)==0:
+#                print "wtf", line
+#                exit()
             ikc.append(kclist)
             kcq[kccount]+=1
-        testdata.append((sid[parts[1]],items[parts[3]][parts[5]],int(parts[13])))
-    print "Number of records: ", len(testdata) ," records skipped: " ,skipcount
+        else:
+            for kcp in parts[17].split('~~'):
+                if kcp.find(";")>=0:
+                    kc = kcp[12:kcp.index(";")]
+                else:
+                    kc=kcp
+                if kc=="":
+                    continue
+                if not kcsmap.has_key(kc):
+                    kcsmap[kc]=len(kcs)
+                if not kcsmap[kc] in ikc[items[parts[3]][parts[5]]]:
+                    #print "Kc NF!", kc
+                    #print rawkcitem[items[parts[3]][parts[5]]]
+                    ikc[items[parts[3]][parts[5]]].append(kcsmap[kc])                    
+                    kcs[kc]+=1
+        data.append((sid[parts[1]],items[parts[3]][parts[5]]))
+        labels.append(int(parts[13]))
+    
+    
     dataset=edata()    
-    dataset.initialize(ikc, len(sid),len(kcsmap),data,labels,testdata)
-    dataset.save("bridge.edata")
+    dataset.initialize(ikc, len(sid),len(kcsmap),data,labels)
+    dataset.createTestSet(7)
+    dataset.save("bridge0607.edata")
 
-            
+
+
+          
 if __name__ == '__main__':
     main()

@@ -107,13 +107,13 @@ class pfasModel(model):
             try:
                 big=m.exp(x)+1
                 if labels[nr]:
-                    totalerror+=1/big
+                    totalerror+=np.log(1/big)
                 else:
-                    totalerror+=1-(1/big)
+                    totalerror+=np.log(1-(1/big))
             except:
                 if not labels[nr]:
                     print "WARNING: major error added in s"
-                    totalerror+=1
+                    totalerror+=np.log(.001)
         model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1',C=10^9)
         model.fit(studentdata,labels)
                   

@@ -19,6 +19,10 @@ import random as r
 from experiment import experiment
 
 def main():
+
+#    data=edata.load("bridge0607.edata")
+#    data.info()
+
 #    np.seterr(all="raise")
 #    models=["afm","pfa"]
 #    splits=[6,8,12,16,32]
@@ -30,29 +34,46 @@ def main():
 #            exp.runExperiment(split,10,"gong.edata")
 #            exp.determineStds()
 
-    exp=experiment.load("afm6exp.exp")
-#    print exp.mainmodel.data.nrs
-#    exp.spearman()
-    exp.determineStds()         
+#    exp=experiment.load("pfa6exp.exp")
+###    print exp.mainmodel.data.nrs
+#    exp.rankOrder()
+#    exp.determineStds()         
 
 
 #    exp=experiment("afm","afm"+str(6))
 #    exp.runExperiment(6,10,"bridge.edata")
 #    exp.determineStds()
 
-    #29-8-14
+    #29-8-14 Fisher info experiment. Get some outliers atm
 #    data=edata.load("train2.edata")
-#    model=afmModel(data,False)
-#    model.fit()
-#    model.aprime()
-    #z=model.determineVariance(5)
+#    data.beforeSplitCleaning()
+#    data.splitCleaning()
+##    model=afmModel(data,False)
+##    model.fit()
+##    model.save("testing.afm")
+    model=afmModel.load("testing.afm")
+    model.testSecond()
     #x=model.covarianceMatrix()
-    #print z[682],z[683],x.shape,len(z)
-    #682 & 683 removed to obtain covariance matrix
-    #z=np.delete(z,[682,683])
-    #for i in range(x.shape[1]):
-    #    print i,z[i],z[i]-x[i,i]**.5
-    #check=0     
+    #z=model.determineVariance(5)
+    #difference=[]
+#    
+#    for i in range(len(z)):
+#        print "\n next parameter",i,"\n"
+#        diff=[]
+#        for j in range(len(z[i])):
+#            if i==0:
+#                offset=data.nrs+data.nrkc
+#            if i==1:
+#                offset=data.nrs
+#            if i==2:
+#                offset=0
+#            diff.append(z[i][j]-x[offset+j,offset+j])
+#            if i==0:
+#                print x[offset+j,offset+j]
+#        print "mean and std"
+#        print np.mean(z[i]),np.std(z[i])
+#        print np.mean(diff),np.std(diff)
+   
 
 """ 
     data=edata.load("train2.edata")

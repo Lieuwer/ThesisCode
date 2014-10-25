@@ -15,6 +15,8 @@ ikc=defaultdict(list)
 def main():
     trainfile="D:\\scriptie\\Thesisdata\\algebra_2005_2006\\algebra_2005_2006_train.csv"
     testfile="D:\\scriptie\\Thesisdata\\algebra_2005_2006\\algebra_2005_2006_master.csv"
+#    trainfile="D:\\scriptie\\Thesisdata\\bridge_to_algebra_2006_2007\\bridge_to_algebra_2006_2007_train.txt"
+#    testfile="D:\\scriptie\\Thesisdata\\bridge_to_algebra_2006_2007\\bridge_to_algebra_2006_2007_master.txt"
     f = open(trainfile, 'r')
     #Steps will count for each item, how often it occurs
     steps={}
@@ -116,7 +118,8 @@ def main():
     # get rid of headers
     f.readline()
     #clear all data
-    data=[]
+    qps=[0]*len(sid)
+    tdata=[]
     labels=[]
     skipcount=0
     for line in f:
@@ -125,6 +128,7 @@ def main():
             print "Warning: student not seen"
             skipcount+=1
             continue
+        qps[sid[parts[1]]]+=1
         if steps.has_key(parts[3]):
             if steps[parts[3]].has_key(parts[5]):
                 steps[parts[3]][parts[5]]+=1
@@ -153,12 +157,30 @@ def main():
                 ikc[items[parts[3]][parts[5]]].append(kcsmap[kc])
                 kcs[kc]+=1
             kcq[kccount]+=1
-        data.append((sid[parts[1]],items[parts[3]][parts[5]]))
+        tdata.append((sid[parts[1]],items[parts[3]][parts[5]]))
         labels.append(int(parts[13]))
-    print "Number of records: ", len(data) ," records skipped: " ,skipcount
+    print "Number of records: ", len(tdata) ," records skipped: " ,skipcount
 
+    qpst=[0]*len(sid)
+    for d in data:
+        qpst[d[0]]+=1
+    
+    
     print float(error)/total
-        
-            
+    stats=defaultdict(int)
+    records=defaultdict(int)
+    for i,n in enumerate(qps):
+        stats[n]+=1
+        records[n]+=qpst[i]
+    print "N items in testset / nr students / avg trainset"
+    total=0
+    for n,i in stats.iteritems():
+        print n,i,records[n]*1.0/i
+        total+=n*i
+    print "records per student in test",total/(len(qps)*1.0)
+    print "average rec per student",len(data)/(len(qps)*1.0)
+    
+    
+                
 if __name__ == '__main__':
     main()

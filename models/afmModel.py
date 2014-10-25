@@ -78,6 +78,7 @@ class afmModel(model):
         nrs=len(self.st)
         nrkc=len(self.cb)  
         labels=self.data.labels
+        print "length according to afmModel",  nrs+nrkc*2
         if self.fullmatrix:  
             data=np.zeros((len(self.data.data),nrs+nrkc*2))
             R=np.zeros((len(self.data.data),len(self.data.data)))
@@ -104,8 +105,10 @@ class afmModel(model):
                 R[nr,nr]=1/big*(1-1/big)
             except:
                 0
-        data=data.tocsr()
+        if not self.fullmatrix:
+            data=data.tocsr()
         moment=(data.transpose()*R*data)
+        print "moment shape:", moment.shape
         #inversing can be a problem as the matrix can be singular, thus removing those rows and collumns where diagonal is zero
 #        removing=[]
 #        nrparams = moment.shape[0]
@@ -118,7 +121,7 @@ class afmModel(model):
 #        temp = moment[w,:]
 #        print "removed: ", removing
 #        return np.linalg.inv(temp[:,w].todense())
-        return np.linalg.pinv(moment.todense())
+        return np.linalg.inv(moment.todense())
         
     #
     # Methods for the fitting procedure
@@ -154,13 +157,13 @@ class afmModel(model):
             try:
                 big=m.exp(x)+1
                 if labels[nr]:
-                    totalerror+=1/big
+                    totalerror+=np.log(1/big)
                 else:
-                    totalerror+=1-(1/big)
+                    totalerror+=np.log(1-(1/big))
             except:
                 if not labels[nr]:
                     print "WARNING: major error added in s"
-                    totalerror+=1
+                    totalerror+=np.log(.001)
         print "about to fit model"
         model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1',C=10^9)
         if sum(labels)==0 or sum(labels)==len(labels):

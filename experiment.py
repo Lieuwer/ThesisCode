@@ -44,6 +44,8 @@ class experiment():
         self.filenamebase=filename
         #aprime values per part
         self.aprimes=[]
+        self.loglike=[]
+        self.ranks
         
     def runExperiment(self,splits,runs,filename):
         data=edata.load(filename)
@@ -66,10 +68,11 @@ class experiment():
                 model=afmModel(d,False)
             if self.modeltype=="pfa":
                 model=pfasModel(d,False)
-            model.fit()
+            self.loglike.append(model.fit())
             self.variances.append(model.determineVariance(runs))
             self.models.append(model)
-            #self.aprimes.append(model.aPrime())
+            self.aprimes.append(model.aPrime())
+            
         self.save(self.filenamebase+"exp.exp")
 
         
@@ -204,16 +207,19 @@ class experiment():
 
             plt.savefig(self.filenamebase+"in_tot_var"+self.mainmodel.paranames[i])
                         
-            
-    def spearman(self):
-        dims=len(self.models[0].spearman(self.models[0]))
-        spearman=np.zeros((len(self.models),dims))
+                        
+    def rankOrder(self,order="kendall"):
+        
+        dims=len(self.models[0].rankOrder(self.models[0]))
+        self.ranks=np.zeros((dims,len(self.models),len(self.models)))
         for i in range(len(self.models)):
             for j in range(i+1,len(self.models)):
-                spearman[i,:]=self.models[i].spearman(self.models[j])
-        print "spearmans"
-        for i in range(len(spearman[0,:])):
-            print self.mainmodel.paranames[i], np.mean(spearman[:,i])
+                self.ranks[:,i,j]=self.models[i].rankOrder(self.models[j],order)
+        print "Rankorder:", order
+        
+        
+        for i in range(dims):
+            print self.mainmodel.paranames[i], np.sum(self.ranks[i,:,:])/((len(self.models)**2-len(self.models))/2)
 
     def getVariances(self):
         mainmodel=self.mainmodel

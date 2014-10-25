@@ -109,8 +109,8 @@ class model(object):
     
     def addParam(self, par):
         self.parameters.append(par)
-    
-    def spearman(self, other):
+           
+    def rankOrder(self, other,rank="kendall"):
         #A bit of a hack momentarily which works for AFM and PFA. Only looks at KC parameters
         answerlist=np.zeros(len(self.parameters)-1)
         for i in range(len(answerlist)):
@@ -125,7 +125,10 @@ class model(object):
                 if not (j in self.data.kcmis or j in other.data.kcmis):
                     pars1.append(self.parameters[i][j-skip1])
                     pars2.append(other.parameters[i][j-skip2])
-            answerlist[i]=stat.spearmanr(pars1,pars2)[0]
+            if rank=="spearman":
+                answerlist[i]=stat.spearmanr(pars1,pars2)[0]
+            else:
+                answerlist[i]=stat.kendalltau(pars1,pars2)[0]
         return answerlist
     
     def nrParams(self):

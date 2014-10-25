@@ -4,6 +4,7 @@ import random as r
 from collections import defaultdict
 import copy
 import time,datetime
+import matplotlib.pyplot as plt
 
 #Go from a cumulative distribution list to determine what kc's are
 #linked to what item
@@ -344,12 +345,12 @@ class edata:
         kcf=[0]*self.nrkc
         for d in self.giveData():
             for kc in self.ikc[d[1]]:
-                if [d[2]]:
+                if d[2]:
                     kcc[kc]+=1
                 else:
                     kcf[kc]+=1
         for i in range(self.nrkc):
-            if kcc[i]<minq and kcf[i]<minq and not i in self.kcmis:
+            if (kcc[i]<minq or kcf[i]<minq) and not i in self.kcmis:
                 self.kcmis.append(i)
                 print "KC dropped", i
         self.removeData()
@@ -370,3 +371,48 @@ class edata:
         self.updateMapping()
         print "Time taken by splitcleaning", str(datetime.timedelta(seconds=(time.time()-t)))
         print "Removed %i students and %i kcs"%(olds-self.nrs, oldkc-self.nrkc)
+    
+    def createTestSet(self,testnr):
+        qs=self.countStudentQuestions()
+        cqs=[0]*self.nrs
+        newdata=[]
+        newlabels=[]
+        test=[]
+        for d in self.giveData():
+            if cqs[d[0]]<qs[d[0]]-testnr:
+                newdata.append((d[0],d[1]))
+                newlabels.append(d[2])
+            else:
+                test.append(d)
+        self.data=newdata
+        self.labels=newlabels
+        self.testdata=test
+    
+    def info(self):
+        print "Display info on edata"
+        print "There are %i records in dataset and %i in testset"%(len(self.data),len(self.testdata))
+        print "Students(missing): %i(%i)"%(self.nrs,len(self.studentmis))
+        print "KCs(missing): %i(%i)"%(self.nrkc,len(self.kcmis))
+        kcseen=self.countKCQuestions()
+        plt.figure()
+        plt.xlabel("Questions per KC")
+        plt.hist(kcseen, self.nrkc/7, histtype='bar')
+        plt.savefig("qkc")
+        sseen=self.countStudentQuestions()
+        plt.figure()
+        plt.xlabel("Questions per student")
+        plt.hist(sseen, self.nrs/15, histtype='bar')
+        plt.savefig("qs")
+        kcpq=defaultdict(int)
+        for d in self.giveData():
+            kcpq[len(self.ikc[d[1]])]+=1
+        plt.figure()
+        plt.xlabel("KCs per question")
+        plt.ylabel("Number question")
+        plt.plot(kcpq.keys(),kcpq.values(),"-")
+        kcpi=defaultdict(int)
+        for i in self.ikc:
+            kcpi[len(i)]+=len(self)/len(self.ikc)
+        plt.plot(kcpi.keys(),kcpi.values(),"r-")    
+        plt.savefig("kcp")
+        
