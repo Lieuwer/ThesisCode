@@ -98,6 +98,7 @@ def main():
     
     dataset=edata()    
     dataset.initialize(ikc, len(sid),len(kcsmap),data,labels)
+    dataset.createTestSet(7)
     dataset.save("gong.edata")
     
 #    print "The length of testdata", len(testdata)

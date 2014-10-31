@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import scipy.stats as stat
 import random as r
 import cPickle as pickle
-from experiment import experiment
+
 
 class experimentProcessing():
     def save(self, filename):
@@ -24,42 +24,160 @@ class experimentProcessing():
         filehandle=open(filename,"rb")
         return pickle.load(filehandle)    
     
-    def __init__(self):
-        self.models=['afm','pfa']
-        self.splits=[6,8,12,16,32]
-        self.nrPars=[2,3]
-        self.params=[]
-        self.nrs=0
+    def __init__(self,paranms,parameters,ap,ll,inter,ainter,var,ranks,avginhranks):
+        #Names of the parameters
+        self.paranames=paranms
+        #The internalvariances, list of length #par types with (nrkc x nrsplits) array. Missing values have NaN
+        self.variancesInh=inter
+        #Cleaned up avg variances (NaN values removed)
+        self.avgvariancesInh=ainter
+        #variances over the splits
+        self.variancesSeen=var
+        #Parameters of the main model, useful for figures and normalizing
+        self.parametersMain=parameters
+        #Rankordermatrix of the values over the splits
+        self.rankOrderSeen=ranks
+        #avg rankorder for every splits generated models
+        self.rankOrdersInh=avginhranks
+        #Students dropped in cleaning for every split
+        self.studentsCleaned=[]
+        #KC's dropped in cleaning for every split
+        self.KCCleaned=[]
+        #aprime and log likelihood (normalized) for every split
+        self.aprimes=ap
+        self.lLikely=ll
+        #Left out on the basis of missing internal/external 
+        self.kcLeftOut=[]
         
-        self.params.append(np.zeros((len(self.splits),2*2)))
-        self.params.append(np.zeros((len(self.splits),3*2)))
-        for i,split in enumerate(self.splits):
-            for j,model in enumerate(self.models):
+        #should keep track of total amount of data...
+        
+    def process(self):
+        splits=len(self.KCCleaned)
+        filebase=str(splits)
+       
+        if len(self.paranames)==3:
+            filebase="afm"+filebase
+        else:
+            filebase="pfa"+filebase
+        self.kcmis=np.zeros(len(self.parametersMain[0]))
+        for i in self.KCCleaned:
+            for j in i:
+                self.kcmis[j]+=1
+        for i in range(len(self.parametersMain[0])):
+                #Taking learning factor as guidance as this is most likely to have too little data
+                if np.isnan(self.variancesSeen[1][i]) or (len(self.variancesSeen)>2 and np.isnan(self.variancesSeen[2][i])):
+                    self.kcLeftOut.append(i)
+        for k in range(len(self.parametersMain)-1):
+            self.variancesSeen[k]=np.delete(self.variancesSeen[k],np.array(self.kcLeftOut))
+            self.avgvariancesInh[k]=np.delete(self.avgvariancesInh[k],np.array(self.kcLeftOut))
+            self.parametersMain[k]=np.delete(self.parametersMain[k],np.array(self.kcLeftOut))
+#            plt.figure()
+#            plt.xlabel("Parameter value")
+#            plt.ylabel("Paramater standard deviation")
+#            plt.plot(self.parametersMain[k], np.sqrt(self.variancesSeen[k]),"o")
+#            plt.savefig(filebase+self.paranames[k]+"_valVSvar")
+#            
+#            plt.figure()
+#            plt.xlabel("seen sd")
+#            plt.ylabel("inherent sd")
+#            plt.plot(np.sqrt(self.variancesSeen[k]), np.sqrt(self.avgvariancesInh[k]),"o")
+#            plt.savefig(filebase+self.paranames[k]+"_svarVivar")
+        self.avgtotsd=[]
+        self.avginhsd=[]
+        for i in range(len(self.paranames)-1):
+            self.avgtotsd.append(np.mean(np.sqrt(self.variancesSeen[i])))
+            self.avginhsd.append(np.mean(np.sqrt(self.avgvariancesInh[i])))
+        
+            
+    def rankOrder(self):
+        
+        avginhrank=np.mean(self.rankOrdersInh,0)
+        for i in range(self.rankOrderSeen.shape[0]):
+            print self.paranames[i],avginhrank[i], np.sum(self.rankOrderSeen[i,:,:])/((self.rankOrderSeen.shape[2]**2-self.rankOrderSeen.shape[2])/2)
+            print "in/tot average sd",np.mean(np.sqrt(self.avgvariancesInh[i])), np.mean(np.sqrt(self.variancesSeen[i]))
+            #Ineherent vs variance rankorder:
+            print "rankorder inherent vs seen variance:", stat.kendalltau(self.avgvariancesInh[i],self.variancesSeen[i])[0]
+        
+            
+if __name__ == "__main__":
+#        inf=experimentProcessing.load("pfaTest8e.info")
+#        inf.process()
+#        inf.rankOrder()
+        datset="algebra"
+        basefile="D:\\spyderstuff\\ThesisCode\\Experiments\\1031gong\\"
+        models=['afm','pfa']
+        splits=[6,8,12,16,32]
+        nrPars=[2,3]
+        params=[]
+        totRanks=[]
+        inhRanks=[]
+        aprimes=[]
+        llikely=[]
+        #Change to Total questions
+        nrs=0
+        
+        for i in range(len(models)):
+            inhRanks.append([])
+            totRanks.append([])
+            params.append(np.zeros((len(splits),nrPars[i]*2)))
+            aprimes.append([])
+            llikely.append([])
+            
+        
+        for i,split in enumerate(splits):
+            for j,model in enumerate(models):
                 print split
-                exp=experiment.load("D:\\spyderstuff\\ThesisCode\\Experiments\\gong\\"+model+str(split)+"exp.exp")
-                info=exp.getVariances()
-                self.nrs=exp.mainmodel.data.nrs*1.0
-                print info
-                self.params[j][i,:]=info
-        #Due to memory crashes, data is put in like this. <--bridge data
-#        self.params.append(np.array([[ 0.38872627, 0.50705948, 0.35116546, 1.11868367],[ 0.44374125,  0.58461036 , 0.38927952,  1.23754498],[ 0.5054817,  0.68828295,  0.44710189,  1.42358945],[ 0.56424658 , 0.77423182,  0.48583258 , 1.5486857 ],[ 0.68475655 , 0.94191299 , 0.55993345,  1.78899011]]))
-#        self.params.append(np.array([[ 0.40543848,  0.52010538 , 0.56562546,  0.39037801,  1.03993924 , 0.7821048 ],[ 0.45872448 , 0.60275368 , 0.66000739 , 0.42487795 , 1.12692069,  0.84553601],[ 0.53947114 , 0.69562019 , 0.82460349 , 0.48667268 , 1.29535967 , 0.97180388],[ 0.6114219,   0.79009548 , 0.87890323 , 0.52164013 , 1.38569553,  1.0370177 ],[ 0.79287871 , 0.97850259,  1.11264888,  0.62302985  ,1.65357639 , 1.23620541]]))
-        self.save("basic.info")
+                inf=experimentProcessing.load(basefile+model+str(split)+".info")
+                inf.process()
+                inf.rankOrder()
+                nrs=len(inf.parametersMain[-1])*1.0
+                #needs to be normalized first...
+                params[j][i,:]=np.array(inf.avgtotsd+inf.avginhsd)
+                aprimes[j].append(np.mean(inf.aprimes))
+                llikely[j].append(np.mean(inf.lLikely))
+                avginhrank=np.mean(inf.rankOrdersInh,0)
+                inhRanks[j].append(avginhrank)
+                totRanks[j].append(np.sum(inf.rankOrderSeen,(1,2))/((split**2-split)/2))
+        
         nrslist=[]
         colors=['r','g','m']        
-        params=['Beta','Gamma','Ro']
-        for i in self.splits:
-            nrslist.append(int(round(self.nrs/i)))
-        for i,model in enumerate(self.models):
+        paranames=['Beta','Gamma','Ro']
+        plottypes=['o','x']
+        for i in splits:
+            nrslist.append(int(round(nrs/i)))
+            
+        for i,model in enumerate(models):
             plt.figure()
             plt.xlabel("Number of students per split")
             plt.ylabel("Average normalized standard deviation")
-            for j in range(self.nrPars[i]):
-                plt.plot(nrslist, self.params[i][:,j],'o'+colors[j]+'-',label=params[j]+'(Total)')
-                plt.plot(nrslist,self.params[i][:,self.nrPars[i]+j],'o'+colors[j]+'--', label=params[j]+'(Internal)')
+            for j in range(nrPars[i]):
+                plt.plot(nrslist, params[i][:,j],'o'+colors[j]+'-',label=paranames[j]+'(Total)')
+                plt.plot(nrslist,params[i][:,nrPars[i]+j],'o'+colors[j]+'--', label=paranames[j]+'(Internal)')
             plt.legend()
-            plt.savefig("gong"+model)
+            plt.savefig(datset+model+"sds")
+   
+        for i,model in enumerate(models):
+            plt.figure()
+            plt.xlabel("Number of students per split")
+            plt.ylabel("(average) Kendall rankorder over(/within) splits")
+            for j in range(nrPars[i]):
+                plt.plot(nrslist,np.array(totRanks[i])[:,j],'o'+colors[j]+'-',label=paranames[j]+'(Total)')
+                plt.plot(nrslist,np.array(inhRanks[i])[:,j],'o'+colors[j]+'--', label=paranames[j]+'(Internal)')
+            #plt.legend()
+            plt.savefig(datset+model+"ranks")
         
+        plt.figure()
+        plt.xlabel("A-prime")
+        plt.ylabel("Rank-order")
+        for i,model in enumerate(models):
+            for j in range(nrPars[i]):
+                plt.plot(aprimes[i],np.array(totRanks[i])[:,j],plottypes[i]+"-")     
+        plt.savefig(datset+"apVSrank")
         
-if __name__ == "__main__":
-    p=experimentProcessing()
+        plt.figure()
+        plt.xlabel("Average log likelihood")
+        plt.ylabel("Rank-order")
+        for i,model in enumerate(models):
+            for j in range(nrPars[i]):
+                plt.plot(llikely[i],np.array(totRanks[i])[:,j],plottypes[i]+"-")     
+        plt.savefig(datset+"llVSrank")

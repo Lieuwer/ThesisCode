@@ -379,9 +379,10 @@ class edata:
         newlabels=[]
         test=[]
         for d in self.giveData():
-            if cqs[d[0]]<qs[d[0]]-testnr:
+            if cqs[d[0]]<(qs[d[0]]-testnr):
                 newdata.append((d[0],d[1]))
                 newlabels.append(d[2])
+                cqs[d[0]]+=1
             else:
                 test.append(d)
         self.data=newdata

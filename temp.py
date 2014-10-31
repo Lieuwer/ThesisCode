@@ -17,22 +17,23 @@ import matplotlib.pyplot as plt
 import scipy.stats as stat
 import random as r
 from experiment import experiment
+from experimentProcessing import experimentProcessing
 
 def main():
 
 #    data=edata.load("bridge0607.edata")
 #    data.info()
 
-#    np.seterr(all="raise")
-#    models=["afm","pfa"]
-#    splits=[6,8,12,16,32]
-#    for split in splits:
-#        for model in models:
-#            print "\nStarting experiment:", model,split
-##            exp=experiment.load(model+str(split)+"exp.exp")
-#            exp=experiment(model,model+str(split))
-#            exp.runExperiment(split,10,"gong.edata")
-#            exp.determineStds()
+    np.seterr(all="raise")
+    models=["afm","pfa"]
+    splits=[6,8,12,16,32]
+    for split in splits:
+        for model in models:
+            print "\nStarting experiment:", model,split
+#            exp=experiment.load(model+str(split)+"exp.exp")
+            exp=experiment(model,model+str(split))
+            exp.runExperiment(split,10,"algebra0506.edata")
+            exp.determineStds()
 
 #    exp=experiment.load("pfa6exp.exp")
 ###    print exp.mainmodel.data.nrs
@@ -51,8 +52,8 @@ def main():
 ##    model=afmModel(data,False)
 ##    model.fit()
 ##    model.save("testing.afm")
-    model=afmModel.load("testing.afm")
-    model.testSecond()
+#    model=afmModel.load("testing.afm")
+#    model.testSecond()
     #x=model.covarianceMatrix()
     #z=model.determineVariance(5)
     #difference=[]

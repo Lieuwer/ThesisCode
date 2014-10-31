@@ -13,6 +13,7 @@ from edata import edata
 from complexModel import complexModel
 from pfasModel import pfasModel
 from afmModel import afmModel
+from experimentProcessing import experimentProcessing
 import time,datetime
 from baseline import baseline
 import numpy as np
@@ -45,7 +46,7 @@ class experiment():
         #aprime values per part
         self.aprimes=[]
         self.loglike=[]
-        self.ranks
+        self.inherentRankOrder=[]
         
     def runExperiment(self,splits,runs,filename):
         data=edata.load(filename)
@@ -69,14 +70,19 @@ class experiment():
             if self.modeltype=="pfa":
                 model=pfasModel(d,False)
             self.loglike.append(model.fit())
-            self.variances.append(model.determineVariance(runs))
+            inherentInfo=model.determineVariance(runs)
+            self.variances.append(inherentInfo[0])
+            self.inherentRankOrder.append(inherentInfo[1])
             self.models.append(model)
             self.aprimes.append(model.aPrime())
+            for i in range(3):
+                print "\nmodel:",model.parameterVariance(model.paranames[i])
+                print "inherent:",inherentInfo[2][i]
+                print "mainM:",self.mainmodel.parameterVariance(model.paranames[i])
             
-        self.save(self.filenamebase+"exp.exp")
+        self.save(self.filenamebase+".exp")
 
-        
-            
+
     def determineStds(self):
         textfile=open(self.filenamebase+".txt","w")
         mainmodel=self.mainmodel
@@ -139,29 +145,27 @@ class experiment():
             for j in range(kcpars):
                 #also normalize all this
                 if len(parlists[j])>2 and sum(np.abs(parlists[j]))>0:
-                    totalvar[j][i]=np.var(parlists[j],ddof=1)/modelvars[j]
-                    averageinternalvar[j][i]=(np.mean(intparlists))/modelvars[j]
-                    externalvar[j][i]=(totalvar[j][i]-np.mean(intparlists))/modelvars[j]                    
+                    totalvar[j][i]=np.var(parlists[j],ddof=1)
+                    averageinternalvar[j][i]=(np.mean(intparlists[j]))
+                    externalvar[j][i]=(totalvar[j][i]-np.mean(intparlists[j]))
 #                    totalvar[j]=1-(totalvar[j]/(totalvar[j]+modelvars[j]))
 #                    averageinternalvar[j]=1-(averageinternalvar[j]/(averageinternalvar[j]+modelvars[j]))
                 else:
                     totalvar[j][i]=np.NaN
                     averageinternalvar[j][i]=np.NaN
                     externalvar[j][i]=np.NaN
-            if np.isnan(totalvar[1][i]):
-                textfile.write("totalvar is NaN %i,%s \n" %(i, str(parlists[1])))
-                leaveout.append(i)
-
-
-        for k in range(kcpars):
-            totalvar[k]=np.delete(totalvar[k],np.array(leaveout))
-            averageinternalvar[k]=np.delete(averageinternalvar[k],np.array(leaveout))
-            externalvar[k]=np.delete(externalvar[k],np.array(leaveout))
+#            if np.isnan(totalvar[1][i]):
+#                textfile.write("totalvar is NaN %i,%s \n" %(i, str(parlists[1])))
+#                leaveout.append(i)
+#        
+#        
+#
+#        for k in range(kcpars):
+#            totalvar[k]=np.delete(totalvar[k],np.array(leaveout))
+#            averageinternalvar[k]=np.delete(averageinternalvar[k],np.array(leaveout))
+#            externalvar[k]=np.delete(externalvar[k],np.array(leaveout))
             
-        spearman=np.zeros((len(self.models),kcpars))
-        for i in range(len(self.models)):
-            for j in range(i+1,len(self.models)):
-                spearman[i,:]=self.models[i].spearman(self.models[j])   
+
         
         textfile.write("Pars (harmonic) average var and std of var\n")
         for i in range(kcpars):
@@ -169,7 +173,27 @@ class experiment():
             textfile.write("internal: %.3f (%.3f)\n"%(np.mean(averageinternalvar[i]), np.var(averageinternalvar[i],ddof=1)))
             textfile.write("total:  %.3f (%.3f)\n"%(np.mean(totalvar[i]),np.var(totalvar[i],ddof=1)))
             textfile.write("external:  %.3f (%.3f)\n"%(np.mean(externalvar[i]),np.var(externalvar[i],ddof=1)))
-            textfile.write("spearman over total: %.3f\n"%np.mean(spearman[:,i]))
+#                    spearman=np.zeros((len(self.models),kcpars))
+#        for i in range(len(self.models)):
+#            for j in range(i+1,len(self.models)):
+#                spearman[i,:]=self.models[i].spearman(self.models[j])   
+#            textfile.write("spearman over total: %.3f\n"%np.mean(spearman[:,i]))
+        
+        
+        ranks=np.zeros((kcpars,len(self.models),len(self.models)))
+        for i in range(len(self.models)):
+            for j in range(i+1,len(self.models)):
+                ranks[:,i,j]=self.models[i].rankOrder(self.models[j])
+                
+          
+            
+        inf=experimentProcessing(self.mainmodel.paranames,self.mainmodel.parameters,self.aprimes,self.loglike,internalvar,averageinternalvar,totalvar,ranks,self.inherentRankOrder)
+        
+        
+        for model in self.models:
+            inf.studentsCleaned.append(model.data.studentmis)
+            inf.KCCleaned.append(model.data.kcmis)
+        inf.save(self.filenamebase+".info")
         #textfile.write("Aprime avg/std:  %.3f (%.3f)\n"%(np.mean(self.aprimes),np.std(self.aprimes)))
 
 
@@ -196,30 +220,19 @@ class experiment():
         
         
         #Scatter plot of external vs internal variance
-        for i in range(kcpars):
-            plt.figure()
-            plt.xlabel("Total normalized standard deviaton")
-            plt.ylabel("Internal normalized standard deviaton")
-            plt.plot(np.sqrt(totalvar[i]), np.sqrt(averageinternalvar[i]),"o")
-            to=min([max(np.sqrt(totalvar[i])),max(np.sqrt(averageinternalvar[i]))])
-            fro=max([min(np.sqrt(totalvar[i])),min(np.sqrt(averageinternalvar[i]))])
-            plt.plot([fro, to], [fro, to],"k-")
-
-            plt.savefig(self.filenamebase+"in_tot_var"+self.mainmodel.paranames[i])
+#        for i in range(kcpars):
+#            plt.figure()
+#            plt.xlabel("Total normalized standard deviaton")
+#            plt.ylabel("Internal normalized standard deviaton")
+#            plt.plot(np.sqrt(totalvar[i]), np.sqrt(averageinternalvar[i]),"o")
+#            to=min([max(np.sqrt(totalvar[i])),max(np.sqrt(averageinternalvar[i]))])
+#            fro=max([min(np.sqrt(totalvar[i])),min(np.sqrt(averageinternalvar[i]))])
+#            plt.plot([fro, to], [fro, to],"k-")
+#
+#            plt.savefig(self.filenamebase+"in_tot_var"+self.mainmodel.paranames[i])
                         
                         
-    def rankOrder(self,order="kendall"):
-        
-        dims=len(self.models[0].rankOrder(self.models[0]))
-        self.ranks=np.zeros((dims,len(self.models),len(self.models)))
-        for i in range(len(self.models)):
-            for j in range(i+1,len(self.models)):
-                self.ranks[:,i,j]=self.models[i].rankOrder(self.models[j],order)
-        print "Rankorder:", order
-        
-        
-        for i in range(dims):
-            print self.mainmodel.paranames[i], np.sum(self.ranks[i,:,:])/((len(self.models)**2-len(self.models))/2)
+   
 
     def getVariances(self):
         mainmodel=self.mainmodel
@@ -301,5 +314,43 @@ class experiment():
             averageinternalvar[k]=np.delete(averageinternalvar[k],np.array(leaveout))
             averageinternalvar[k]=np.mean(np.sqrt(averageinternalvar[k]))
         return np.array(totalvar+averageinternalvar)
-        
-            
+ 
+
+if __name__ == "__main__":
+    exp=experiment("pfa","pfaTest8e")
+    exp.runExperiment(8,4,"gong.edata")
+#    exp.determineStds()
+#        self.models=['afm','pfa']
+#        self.splits=[6,8,12,16,32]
+#        self.nrPars=[2,3]
+#        self.params=[]
+#        self.nrs=0
+#        
+#        self.params.append(np.zeros((len(self.splits),2*2)))
+#        self.params.append(np.zeros((len(self.splits),3*2)))
+#        for i,split in enumerate(self.splits):
+#            for j,model in enumerate(self.models):
+#                print split
+#                exp=experiment.load("D:\\spyderstuff\\ThesisCode\\Experiments\\gong\\"+model+str(split)+"exp.exp")
+#                info=exp.getVariances()
+#                self.nrs=exp.mainmodel.data.nrs*1.0
+#                print info
+#                self.params[j][i,:]=info
+#        #Due to memory crashes, data is put in like this. <--bridge data
+##        self.params.append(np.array([[ 0.38872627, 0.50705948, 0.35116546, 1.11868367],[ 0.44374125,  0.58461036 , 0.38927952,  1.23754498],[ 0.5054817,  0.68828295,  0.44710189,  1.42358945],[ 0.56424658 , 0.77423182,  0.48583258 , 1.5486857 ],[ 0.68475655 , 0.94191299 , 0.55993345,  1.78899011]]))
+##        self.params.append(np.array([[ 0.40543848,  0.52010538 , 0.56562546,  0.39037801,  1.03993924 , 0.7821048 ],[ 0.45872448 , 0.60275368 , 0.66000739 , 0.42487795 , 1.12692069,  0.84553601],[ 0.53947114 , 0.69562019 , 0.82460349 , 0.48667268 , 1.29535967 , 0.97180388],[ 0.6114219,   0.79009548 , 0.87890323 , 0.52164013 , 1.38569553,  1.0370177 ],[ 0.79287871 , 0.97850259,  1.11264888,  0.62302985  ,1.65357639 , 1.23620541]]))
+#        self.save("basic.info")
+#        nrslist=[]
+#        colors=['r','g','m']        
+#        params=['Beta','Gamma','Ro']
+#        for i in self.splits:
+#            nrslist.append(int(round(self.nrs/i)))
+#        for i,model in enumerate(self.models):
+#            plt.figure()
+#            plt.xlabel("Number of students per split")
+#            plt.ylabel("Average normalized standard deviation")
+#            for j in range(self.nrPars[i]):
+#                plt.plot(nrslist, self.params[i][:,j],'o'+colors[j]+'-',label=params[j]+'(Total)')
+#                plt.plot(nrslist,self.params[i][:,self.nrPars[i]+j],'o'+colors[j]+'--', label=params[j]+'(Internal)')
+#            plt.legend()
+#            plt.savefig("gong"+model)         

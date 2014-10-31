@@ -15,8 +15,8 @@ from collections import defaultdict
 def main():
     trainfile="D:\\scriptie\\Thesisdata\\bridge_to_algebra_2006_2007\\bridge_to_algebra_2006_2007_train.txt"
     testfile="D:\\scriptie\\Thesisdata\\bridge_to_algebra_2006_2007\\bridge_to_algebra_2006_2007_master.txt"
-#    trainfile="D:\\scriptie\\Thesisdata\\algebra_2005_2006\\algebra_2005_2006_train.csv"
-#    testfile="D:\\scriptie\\Thesisdata\\algebra_2005_2006\\algebra_2005_2006_master.csv"
+    trainfile="D:\\scriptie\\Thesisdata\\algebra_2005_2006\\algebra_2005_2006_train.csv"
+    testfile="D:\\scriptie\\Thesisdata\\algebra_2005_2006\\algebra_2005_2006_master.csv"
     f = open(trainfile, 'r')
     #Steps will count for each item, how often it occurs
     steps={}
@@ -186,7 +186,7 @@ def main():
     dataset=edata()    
     dataset.initialize(ikc, len(sid),len(kcsmap),data,labels)
     dataset.createTestSet(7)
-    dataset.save("bridge0607.edata")
+    dataset.save("algebra0506.edata")
 
 
 

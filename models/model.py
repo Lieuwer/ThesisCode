@@ -142,27 +142,40 @@ class model(object):
         #the stochastic nature of the data. Data is generated 'runs' times,
         #redetermining only the labels, and the model is fitted each time.
         #the variance for each parameter over all runs is determined
+        parvar=[]
         params=[]
+        ranks2=[]
         for i in range(len(self.parameters)):      
             params.append(np.zeros((runs,len(self.parameters[i]))))
-        othermodel=copy.deepcopy(self)
-        othermodel.basekcc=np.zeros((self.data.nrs,self.data.nrkc))
-        othermodel.basekcf=np.zeros((self.data.nrs,self.data.nrkc))
+            parvar.append([])
+        
+        
         for i in range(runs):
-            othermodel.clearGenerate()
+            othermodel=copy.deepcopy(self)
+            othermodel.basekcc=np.zeros((self.data.nrs,self.data.nrkc))
+            othermodel.basekcf=np.zeros((self.data.nrs,self.data.nrkc))
             for d in self.data.giveData():
                 othermodel.generate(d[0],d[1])
-            print len(self.data)
             #Testpart is not yet correct?, as it the basekcc needs to be set at this point and the kcc reset once the testdata has been made.            
 #            for d in self.data.giveTestData():
 #                othermodel.generateTest(d[0],d[1])
             
             othermodel.fit()
+            
+            ranks2.append(self.rankOrder(othermodel))
 #            othermodel.aPrime()
             for j,p in enumerate(othermodel.giveParams()):
                 params[j][i,:]=p
+                parvar[j].append(othermodel.parameterVariance(othermodel.paranames[j]))
+        ranks=np.zeros((len(self.parameters),runs,runs))
+        
         variances=[]
         for i in range(len(self.parameters)):
+            parvar[i]=np.mean(parvar[i])
+            for j in range(runs):
+                for k in range(j+1,runs):
+                    
+                    ranks[i,j,k]=stat.kendalltau(params[i][j,:],params[i][k,:])[0]
             avg=np.mean(params[i],0)
             var=np.var(params[i],0,ddof=1)
             variances.append(var)
@@ -171,7 +184,14 @@ class model(object):
 #            for j in range(params[i].shape[1]):
 #                print j,avg[j],var[j]
         #variances=np.concatenate(variances)
-        return variances
+        ranks=np.sum(ranks,(1,2))/((runs**2-runs)/2)
+        ranks2=[[],[],[],[]]
+        for j,p in enumerate(self.giveParams()):
+            for i in range(runs):
+                ranks2[j].append(stat.kendalltau(params[j][i,:],p)[0])
+#        print "\nValues for the inherent ranks vs ranks against sourcemodel\n",ranks,np.mean(np.array(ranks2),1),"\n"
+
+        return (variances,ranks,parvar)
             
     def aPrime(self):
         #Doesn't take into account that elements in the test set might be dependant
