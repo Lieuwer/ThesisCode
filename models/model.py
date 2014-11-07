@@ -40,13 +40,16 @@ class model(object):
     def clearGenerate(self):
         #clear the data and reset the generator to the moment when no data is made yet
         self.data.clearData()
-        self.kcc=self.basekcc.copy()
-        self.kcf=self.basekcf.copy()
+        self.resetKCCF()
     
     def setBaseKCCF(self,other):
         #basekccf's need to be implemented into fit procedure of each model as well in order to work!
         self.basekcc=self.kcc.copy()
         self.basekcf=self.kcf.copy()
+    
+    def resetKCCF(self):
+        self.kcc=self.basekcc.copy()
+        self.kcf=self.basekcf.copy()
     
     def copyBaseKCCF(self,other):
         self.basekcc=other.kcc.copy()
@@ -152,8 +155,7 @@ class model(object):
         
         for i in range(runs):
             othermodel=copy.deepcopy(self)
-            othermodel.basekcc=np.zeros((self.data.nrs,self.data.nrkc))
-            othermodel.basekcf=np.zeros((self.data.nrs,self.data.nrkc))
+            othermodel.clearGenerate()
             for d in self.data.giveData():
                 othermodel.generate(d[0],d[1])
             #Testpart is not yet correct?, as it the basekcc needs to be set at this point and the kcc reset once the testdata has been made.            
@@ -223,3 +225,19 @@ class model(object):
         print "Time taken for accuracies", str(datetime.timedelta(seconds=(time.time()-t)))
         return float(aTotal)/(len(incorrect)*len(correct))
     
+    def dataLikely(self):
+        likely=0
+        self.resetKCCF()
+        for d in self.data.giveData():
+            p=self.probability(d[0],d[1])
+            if d[2]:
+                likely+=np.log(p)
+                for c in self.ikc[d[1]]:
+                    self.kcc[d[0],c]+=1 
+            else:
+                likely+=np.log(1-p)
+                for c in self.ikc[d[1]]:
+                    self.kcf[d[0],c]+=1
+        return likely/len(self.data)
+        
+            

@@ -137,10 +137,10 @@ class afmModel(model):
         else:
             studentdata=sparsesp.lil_matrix((len(self.data.data),nrs+nrkc*2))
         #keep track of questions answered correctly and questions answered wrongly
-        kcc = self.kcc= np.zeros((nrs,nrkc))
-        kcf = self.kcf= np.zeros((nrs,nrkc))
+        self.resetKCCF()        
+        kcc = self.kcc
+        kcf = self.kcf
         totalerror=0.0
-        print "entering data"
         for nr,d in enumerate(self.data.giveData()):
             s=d[0]
             it=d[1]
@@ -163,21 +163,18 @@ class afmModel(model):
             except:
                 if not labels[nr]:
                     print "WARNING: major error added in s"
-                    totalerror+=np.log(.001)
-        print "about to fit model"
+                    totalerror+=np.log(.95)
         model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1',C=10^9)
         if sum(labels)==0 or sum(labels)==len(labels):
             print "about to die!"
             print "corrects / Total data", sum(labels), len(labels)
             
         
-        model.fit(studentdata,labels)
-        print "Copying parameters"        
+        model.fit(studentdata,labels)       
         self.st[:]=model.coef_[0][:nrs]
         self.cg[:]=model.coef_[0][nrs:nrs+nrkc]
-        self.cb[:]=model.coef_[0][nrs+nrkc:]
-        #Save the found kcc and kcf   
-        return totalerror/len(self.data.data)
+        self.cb[:]=model.coef_[0][nrs+nrkc:]  
+        return totalerror/len(self.data)
 
     def fit(self,maxiterations=50):
         """

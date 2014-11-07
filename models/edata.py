@@ -5,6 +5,7 @@ from collections import defaultdict
 import copy
 import time,datetime
 import matplotlib.pyplot as plt
+import operator
 
 #Go from a cumulative distribution list to determine what kc's are
 #linked to what item
@@ -390,30 +391,60 @@ class edata:
         self.testdata=test
     
     def info(self):
+        self.splitCleaning()
         print "Display info on edata"
         print "There are %i records in dataset and %i in testset"%(len(self.data),len(self.testdata))
         print "Students(missing): %i(%i)"%(self.nrs,len(self.studentmis))
         print "KCs(missing): %i(%i)"%(self.nrkc,len(self.kcmis))
         kcseen=self.countKCQuestions()
+        kccount=defaultdict(int)
+        cumkc=[0]
+        for i in kcseen:
+            kccount[i]+=1
+        kccountsorted=sorted(kccount.items(),key=operator.itemgetter(0))
+        kccount=[0]
+        for i in kccountsorted:
+            kccount.append(i[0])
+            cumkc.append(cumkc[-1]+i[1])
         plt.figure()
         plt.xlabel("Questions per KC")
-        plt.hist(kcseen, self.nrkc/7, histtype='bar')
+        plt.ylabel("KCs with less or equal to questions per KC")
+        plt.plot(kccount,cumkc)
         plt.savefig("qkc")
         sseen=self.countStudentQuestions()
+        scount=defaultdict(int)
+        for i in sseen:
+            scount[i]+=1
+        scountsorted=sorted(scount.items(),key=operator.itemgetter(0))
+        scount=[0]
+        cums=[0]
+        for i in scountsorted:
+            scount.append(i[0])
+            cums.append(cums[-1]+i[1])
         plt.figure()
         plt.xlabel("Questions per student")
-        plt.hist(sseen, self.nrs/15, histtype='bar')
+        plt.ylabel("students with less or equal to questions per student")
+        plt.plot(scount,cums)
         plt.savefig("qs")
         kcpq=defaultdict(int)
         for d in self.giveData():
             kcpq[len(self.ikc[d[1]])]+=1
-        plt.figure()
-        plt.xlabel("KCs per question")
-        plt.ylabel("Number question")
-        plt.plot(kcpq.keys(),kcpq.values(),"-")
-        kcpi=defaultdict(int)
-        for i in self.ikc:
-            kcpi[len(i)]+=len(self)/len(self.ikc)
-        plt.plot(kcpi.keys(),kcpi.values(),"r-")    
-        plt.savefig("kcp")
+        
+        for i,k in kcpq.iteritems():
+            print "%i,(%.3f)"%(k,k*1.0/sum(kcpq.values()))
+        print "% correct:",sum(self.labels)*1.0/len(self)
+        cortest=0
+        for d in self.giveTestData():
+            if d[2]:
+                cortest+=1
+        print "%testsetcorrect:",cortest*1.0/len(self.testdata)
+#        plt.figure()
+#        plt.xlabel("KCs per question")
+#        plt.ylabel("Number question")
+#        plt.plot(kcpq.keys(),kcpq.values(),"-")
+#        kcpi=defaultdict(int)
+#        for i in self.ikc:
+#            kcpi[len(i)]+=len(self)/len(self.ikc)
+#        plt.plot(kcpi.keys(),kcpi.values(),"r-")    
+#        plt.savefig("kcp")
         

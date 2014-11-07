@@ -62,21 +62,24 @@ class experiment():
         self.mainmodel.fit()
         
         sets=data.splitDataStudent(splits)
-        
+
         for d in sets:
             d.splitCleaning()
             if self.modeltype=="afm":
                 model=afmModel(d,False)
             if self.modeltype=="pfa":
                 model=pfasModel(d,False)
-            self.loglike.append(model.fit())
+            print "Avg error in fit", np.e**model.fit()
+            
             inherentInfo=model.determineVariance(runs)
             self.variances.append(inherentInfo[0])
             self.inherentRankOrder.append(inherentInfo[1])
             self.models.append(model)
             self.aprimes.append(model.aPrime())
+            self.loglike.append(model.dataLikely())
+            print "The variance over the different parameters"
             for i in range(3):
-                print "\nmodel:",model.parameterVariance(model.paranames[i])
+                print "model:",model.parameterVariance(model.paranames[i])
                 print "inherent:",inherentInfo[2][i]
                 print "mainM:",self.mainmodel.parameterVariance(model.paranames[i])
             
@@ -84,7 +87,7 @@ class experiment():
 
 
     def determineStds(self):
-        textfile=open(self.filenamebase+".txt","w")
+       # textfile=open(self.filenamebase+".txt","w")
         mainmodel=self.mainmodel
         kcpars=0
         if self.modeltype=="afm":
@@ -137,13 +140,12 @@ class experiment():
                 parlists.append([])
                 intparlists.append([])
             for j in range(len(self.models)):
-                if not np.isnan(pars[0][i,j]):
-                    for k in range(kcpars):
+                for k in range(kcpars):
+                    if not np.isnan(pars[k][i,j]):
                         parlists[k].append(pars[k][i,j])
                         intparlists[k].append(internalvar[k][i,j])
                         
             for j in range(kcpars):
-                #also normalize all this
                 if len(parlists[j])>2 and sum(np.abs(parlists[j]))>0:
                     totalvar[j][i]=np.var(parlists[j],ddof=1)
                     averageinternalvar[j][i]=(np.mean(intparlists[j]))
@@ -167,19 +169,19 @@ class experiment():
             
 
         
-        textfile.write("Pars (harmonic) average var and std of var\n")
-        for i in range(kcpars):
-            textfile.write(str(self.mainmodel.paranames[i])+"\n") 
-            textfile.write("internal: %.3f (%.3f)\n"%(np.mean(averageinternalvar[i]), np.var(averageinternalvar[i],ddof=1)))
-            textfile.write("total:  %.3f (%.3f)\n"%(np.mean(totalvar[i]),np.var(totalvar[i],ddof=1)))
-            textfile.write("external:  %.3f (%.3f)\n"%(np.mean(externalvar[i]),np.var(externalvar[i],ddof=1)))
+#        textfile.write("Pars (harmonic) average var and std of var\n")
+#        for i in range(kcpars):
+#            textfile.write(str(self.mainmodel.paranames[i])+"\n") 
+#            textfile.write("internal: %.3f (%.3f)\n"%(np.mean(averageinternalvar[i]), np.var(averageinternalvar[i],ddof=1)))
+#            textfile.write("total:  %.3f (%.3f)\n"%(np.mean(totalvar[i]),np.var(totalvar[i],ddof=1)))
+#            textfile.write("external:  %.3f (%.3f)\n"%(np.mean(externalvar[i]),np.var(externalvar[i],ddof=1)))
 #                    spearman=np.zeros((len(self.models),kcpars))
 #        for i in range(len(self.models)):
 #            for j in range(i+1,len(self.models)):
 #                spearman[i,:]=self.models[i].spearman(self.models[j])   
 #            textfile.write("spearman over total: %.3f\n"%np.mean(spearman[:,i]))
         
-        
+
         ranks=np.zeros((kcpars,len(self.models),len(self.models)))
         for i in range(len(self.models)):
             for j in range(i+1,len(self.models)):
@@ -187,7 +189,7 @@ class experiment():
                 
           
             
-        inf=experimentProcessing(self.mainmodel.paranames,self.mainmodel.parameters,self.aprimes,self.loglike,internalvar,averageinternalvar,totalvar,ranks,self.inherentRankOrder)
+        inf=experimentProcessing(self.mainmodel,self.aprimes,self.loglike,internalvar,averageinternalvar,totalvar,ranks,self.inherentRankOrder)
         
         
         for model in self.models:

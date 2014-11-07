@@ -76,6 +76,7 @@ class pfasModel(model):
     # Methods for the fitting procedure
     #
     def sUpdate(self):
+        
         #Do a single fitting of the student parameters and update them
         nrs=len(self.st)
         nrkc=len(self.cb)
@@ -86,8 +87,9 @@ class pfasModel(model):
         else:
             studentdata=sparsesp.lil_matrix((len(self.data.data),nrs+nrkc*3))
         #keep track of questions answered correctly and questions answered wrongly
-        kcc = self.kcc= np.zeros((nrs,nrkc))
-        kcf = self.kcf= np.zeros((nrs,nrkc))
+        self.resetKCCF()
+        kcc = self.kcc
+        kcf = self.kcf
         totalerror=0.0
         for nr,d in enumerate(self.data.giveData()):
             
@@ -113,7 +115,7 @@ class pfasModel(model):
             except:
                 if not labels[nr]:
                     print "WARNING: major error added in s"
-                    totalerror+=np.log(.001)
+                    totalerror+=np.log(.95)
         model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1',C=10^9)
         model.fit(studentdata,labels)
                   
@@ -124,7 +126,7 @@ class pfasModel(model):
         #Save the found kcc and kcf
 
         
-        return totalerror/len(self.data.data)
+        return totalerror/len(self.data)
 
     def fit(self,maxiterations=50):
         self.fitError.append(self.sUpdate())

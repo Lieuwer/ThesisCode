@@ -21,18 +21,20 @@ from experimentProcessing import experimentProcessing
 
 def main():
 
-#    data=edata.load("bridge0607.edata")
+#    data=edata.load("algebra0506.edata")
 #    data.info()
-
+    datset="gong"
+    basefile="D:\\spyderstuff\\ThesisCode\\Experiments\\1031"+datset+"\\"
     np.seterr(all="raise")
     models=["afm","pfa"]
     splits=[6,8,12,16,32]
     for split in splits:
         for model in models:
             print "\nStarting experiment:", model,split
-#            exp=experiment.load(model+str(split)+"exp.exp")
+#            exp=experiment.load(basefile+model+str(split)+".exp")
+                
             exp=experiment(model,model+str(split))
-            exp.runExperiment(split,10,"algebra0506.edata")
+            exp.runExperiment(split,10,datset+".edata")
             exp.determineStds()
 
 #    exp=experiment.load("pfa6exp.exp")
