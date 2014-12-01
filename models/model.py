@@ -34,6 +34,10 @@ class model(object):
                 return np.var(self.cg)
             if parname=="ro":
                 return np.var(self.cr)
+            if parname=="eta":
+                return np.var(self.se)
+            if parname=="alpha":
+                return np.var(self.ca)
         except:
             print "Error, this parameter doesn't exist in the model, thus variance cannot be given"
     
@@ -115,7 +119,13 @@ class model(object):
            
     def rankOrder(self, other,rank="kendall"):
         #A bit of a hack momentarily which works for AFM and PFA. Only looks at KC parameters
-        answerlist=np.zeros(len(self.parameters)-1)
+        #Changed it to work for eirt ONLY by changing from -1 to -2 in line below
+        off=0
+        if self.paranames[1]=="gamma":
+            off=1
+        else:
+            off=2
+        answerlist=np.zeros(len(self.parameters)-off)
         for i in range(len(answerlist)):
             pars1=[]
             pars2=[]

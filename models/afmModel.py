@@ -164,7 +164,7 @@ class afmModel(model):
                 if not labels[nr]:
                     print "WARNING: major error added in s"
                     totalerror+=np.log(.95)
-        model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1',C=10^9)
+        model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1',C=30)
         if sum(labels)==0 or sum(labels)==len(labels):
             print "about to die!"
             print "corrects / Total data", sum(labels), len(labels)

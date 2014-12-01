@@ -11,6 +11,7 @@ import sys
 sys.path.append('.\models')
 from edata import edata
 from complexModel import complexModel
+from eirtModel import eirtModel
 from pfasModel import pfasModel
 from afmModel import afmModel
 from experimentProcessing import experimentProcessing
@@ -47,6 +48,8 @@ class experiment():
         self.aprimes=[]
         self.loglike=[]
         self.inherentRankOrder=[]
+        self.parvartot=[]
+        self.parvarinh=[]
         
     def runExperiment(self,splits,runs,filename):
         data=edata.load(filename)
@@ -55,6 +58,8 @@ class experiment():
             self.mainmodel=afmModel(data,False)
         elif self.modeltype=="pfa":
             self.mainmodel=pfasModel(data,False)
+        elif self.modeltype=="eirt":
+            self.mainmodel=eirtModel(data,False)
         else:
             print "ERROR, no correct modeltype given",self.mainmodel
             return
@@ -69,6 +74,8 @@ class experiment():
                 model=afmModel(d,False)
             if self.modeltype=="pfa":
                 model=pfasModel(d,False)
+            if self.modeltype=="eirt":
+                model=eirtModel(d,False)
             print "Avg error in fit", np.e**model.fit()
             
             inherentInfo=model.determineVariance(runs)
@@ -78,22 +85,35 @@ class experiment():
             self.aprimes.append(model.aPrime())
             self.loglike.append(model.dataLikely())
             print "The variance over the different parameters"
-            for i in range(3):
+            totparvar=[]
+            for i in range(len(self.mainmodel.parameters)):
                 print "model:",model.parameterVariance(model.paranames[i])
                 print "inherent:",inherentInfo[2][i]
-                print "mainM:",self.mainmodel.parameterVariance(model.paranames[i])
-            
+                totparvar.append(model.parameterVariance(model.paranames[i]))
+                print "mainM:",totparvar[i]
+            self.parvarinh.append(inherentInfo[2])
+            self.parvartot.append(totparvar)
         self.save(self.filenamebase+".exp")
 
 
     def determineStds(self):
+        
+        #Get some data on how many KCs and students were tossed out.
+        missing=[0.0,0.0]
+        for m in self.models:
+            missing[0]+=len(m.data.studentmis)
+            missing[1]+=len(m.data.kcmis)
+        missing[0]/=len(self.models)
+        missing[1]/=len(self.models)
+        print "studentmis", missing[0], "kcmis", missing[1]
        # textfile=open(self.filenamebase+".txt","w")
         mainmodel=self.mainmodel
         kcpars=0
-        if self.modeltype=="afm":
+        if self.modeltype=="afm" or self.modeltype=="eirt":
             kcpars=2
         if self.modeltype=="pfa":
             kcpars=3
+            
         #For some reasons particular kc parameters may be left out.
         leaveout=[]
         pars=[]
@@ -189,7 +209,7 @@ class experiment():
                 
           
             
-        inf=experimentProcessing(self.mainmodel,self.aprimes,self.loglike,internalvar,averageinternalvar,totalvar,ranks,self.inherentRankOrder)
+        inf=experimentProcessing(self.mainmodel,self.aprimes,self.loglike,internalvar,averageinternalvar,totalvar,ranks,self.inherentRankOrder,self.parvarinh,self.parvartot)
         
         
         for model in self.models:
@@ -237,9 +257,10 @@ class experiment():
    
 
     def getVariances(self):
+        
         mainmodel=self.mainmodel
         kcpars=0
-        if self.modeltype=="afm":
+        if self.modeltype=="afm" or self.modeltype=="eirt":
             kcpars=2
         if self.modeltype=="pfa":
             kcpars=3

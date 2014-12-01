@@ -116,7 +116,7 @@ class pfasModel(model):
                 if not labels[nr]:
                     print "WARNING: major error added in s"
                     totalerror+=np.log(.95)
-        model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1',C=10^9)
+        model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1',C=30)
         model.fit(studentdata,labels)
                   
         self.st[:]=model.coef_[0][:nrs]

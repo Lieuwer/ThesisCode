@@ -396,6 +396,7 @@ class edata:
         print "There are %i records in dataset and %i in testset"%(len(self.data),len(self.testdata))
         print "Students(missing): %i(%i)"%(self.nrs,len(self.studentmis))
         print "KCs(missing): %i(%i)"%(self.nrkc,len(self.kcmis))
+        print "items:", len(self.ikc)
         kcseen=self.countKCQuestions()
         kccount=defaultdict(int)
         cumkc=[0]

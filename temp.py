@@ -8,6 +8,7 @@ import sys
 sys.path.append('.\models')
 from edata import edata
 from complexModel import complexModel
+from eirtModel import eirtModel
 from pfasModel import pfasModel
 from afmModel import afmModel
 import time,datetime
@@ -20,19 +21,19 @@ from experiment import experiment
 from experimentProcessing import experimentProcessing
 
 def main():
-
 #    data=edata.load("algebra0506.edata")
-#    data.info()
-    datset="gong"
-    basefile="D:\\spyderstuff\\ThesisCode\\Experiments\\1031"+datset+"\\"
-    np.seterr(all="raise")
-    models=["afm","pfa"]
+#    print len(data.ikc)
+    datset="algebra0506"
+    basefile="D:\\spyderstuff\\ThesisCode\\Experiments\\1119"+datset+"\\"
+##    np.seterr(all="raise")
+    models=["afm","pfa","eirt"]
     splits=[6,8,12,16,32]
+    models=["afm"]
+    splits=[12]
     for split in splits:
         for model in models:
             print "\nStarting experiment:", model,split
-#            exp=experiment.load(basefile+model+str(split)+".exp")
-                
+#            exp=experiment.load(basefile+model+str(split)+".exp") 
             exp=experiment(model,model+str(split))
             exp.runExperiment(split,10,datset+".edata")
             exp.determineStds()

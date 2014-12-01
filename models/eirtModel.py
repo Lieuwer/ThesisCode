@@ -16,7 +16,7 @@ from model import model
 class eirtModel(model):
     def __init__(self,data,fullmatrix=True):
         #debug option
-        self.debug=False
+        self.debug=True
         #fullmatrix is a lot faster, but takes more memory and can thus simply
         #be infeasable
         self.fullmatrix=fullmatrix        
@@ -28,10 +28,10 @@ class eirtModel(model):
         self.st=np.zeros(data.nrs)
         self.se=np.zeros(data.nrs)
         
-        self.paranames=["alpha","beta","theta0","eta"]
+        self.paranames=["beta","alpha","theta0","eta"]
         self.parameters=[]
-        self.parameters.append(self.ca)
-        self.parameters.append(self.cb)
+        self.parameters.append(self.cb)        
+        self.parameters.append(self.ca)        
         self.parameters.append(self.st)
         self.parameters.append(self.se)
         
@@ -46,7 +46,7 @@ class eirtModel(model):
         #This keeps track of the total error in generating data
         self.genError=0.0
         #This keeps track over the errors while fitting
-        self.fitError=[1,1]
+        self.fitError=[]
         #create student parameter estimates, now done in same fashion as generating data
         #create student parameter estimates, now done in same fashion as generating data
         for i in range(data.nrs):
@@ -73,7 +73,7 @@ class eirtModel(model):
         k=float(len(self.ikc[i]))
         x=0
         for c in self.ikc[i]:
-            x+=self.ca[c]*self.st[s]/k+(self.kcf[s,c]+self.kcc[s,c])*self.se[s]-self.cb[c]
+            x+=self.ca[c]*self.st[s]/k+self.ca[c]*(self.kcf[s,c]+self.kcc[s,c])*self.se[s]-self.cb[c]
         try:
             return 1/(m.exp(-x)+1)
         except:
@@ -96,9 +96,10 @@ class eirtModel(model):
         else:
             studentdata=sparsesp.lil_matrix((len(self.data.data),nrs*2+nrkc))
         #keep track of questions answered correctly and questions answered wrongly
+        
         kcc = self.kcc= self.basekcc.copy()
         kcf = self.kcf= self.basekcf.copy()
-        totalerror=0.0
+        likely=0.0
         for nr,d in enumerate(self.data.giveData()):
             
             s=d[0]
@@ -106,9 +107,9 @@ class eirtModel(model):
             x=0
             k=float(len(self.ikc[it]))
             for c in self.ikc[it]:
-                x+=self.ca[c]*self.st[s]/k+(kcf[s,c]+kcc[s,c])*self.se[s]-self.cb[c]
+                x+=self.ca[c]*self.st[s]/k+self.ca[c]*(kcf[s,c]+kcc[s,c])*self.se[s]-self.cb[c]
                 studentdata[nr,s]+=self.ca[c]/k
-                studentdata[nr,s+nrs]+=kcc[s,c]+kcf[s,c]
+                studentdata[nr,s+nrs]+=(kcc[s,c]+kcf[s,c])*self.ca[c]
                 studentdata[nr,nrs*2+c]=-1
                 if labels[nr]:
                     kcc[s,c]+=1
@@ -117,13 +118,13 @@ class eirtModel(model):
             try:
                 big=m.exp(x)+1
                 if labels[nr]:
-                    totalerror+=1/big
+                    likely+=np.log(1-(1/big))
                 else:
-                    totalerror+=1-(1/big)
+                    likely+=np.log(1/big)
             except:
                 if not labels[nr]:
                     print "WARNING: major error added in s"
-                    totalerror+=1
+                    likely+=np.log(10**-99)
         model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1',C=10^9)
         model.fit(studentdata,labels)
                   
@@ -133,7 +134,7 @@ class eirtModel(model):
         #Save the found kcc and kcf
 
         
-        return totalerror/len(self.data.data)
+        return likely/len(self.data.data)
 
     def kcUpdate(self):
         if self.debug:
@@ -143,23 +144,22 @@ class eirtModel(model):
         labels=self.data.labels
         #Do a single fitting of the kc parameters and update them
         if self.fullmatrix:
-            kcdata=np.zeros((len(self.data.data),2*nrkc+nrs))
+            kcdata=np.zeros((len(self.data.data),2*nrkc))
         else:
             kcdata=sparsesp.lil_matrix((len(self.data.data),4*nrkc))
         
         kcc = np.zeros((nrs,nrkc))
         kcf = np.zeros((nrs,nrkc))
-        totalerror=0.0    
+        likely=0.0    
         for nr,d in enumerate(self.data.giveData()):
             s=d[0]
             it=d[1]
             k=float(len(self.ikc[it]))
             x=0
             for c in self.ikc[it]:
-                x+=self.ca[c]*self.st[s]/k+(kcf[s,c]+kcc[s,c])*self.se[s]-self.cb[c]
-                kcdata[nr,c]+=self.st[s]/k
+                x+=self.ca[c]*self.st[s]/k+(kcf[s,c]+kcc[s,c])*self.se[s]*self.ca[c]-self.cb[c]
+                kcdata[nr,c]+=self.st[s]/k+(kcf[s,c]+kcc[s,c])*self.se[s]
                 kcdata[nr,nrkc+c]=-1
-                kcdata[nr,nrkc*2+s]+=kcf[s,c]+kcc[s,c]
                 if labels[nr]:
                     kcc[s,c]+=1
                 else:
@@ -167,13 +167,13 @@ class eirtModel(model):
             try:
                 big=m.exp(x)+1
                 if labels[nr]:
-                    totalerror+=1/big
+                    likely+=np.log(1-(1/big))
                 else:
-                    totalerror+=1-(1/big)
+                    likely+=np.log(1/big)
             except:
                 if not labels[nr]:
                     print "WARNING: major error added in kc"
-                    totalerror+=1
+                    likely+=np.log(10**-99)
       
         model=linear_model.LogisticRegression(fit_intercept=False,penalty='l1',C=10^9)
         model.fit(kcdata,labels)
@@ -181,9 +181,8 @@ class eirtModel(model):
         
         self.ca[:]=model.coef_[0][:nrkc]
         self.cb[:]=model.coef_[0][nrkc:nrkc*2]
-        self.se[:]=model.coef_[0][nrkc*2:]
         
-        return totalerror/len(self.data.data)
+        return likely/len(self.data.data)
 
     def fit(self,maxiterations=50):
         #keep track how often in succession no improvements were made       
@@ -193,7 +192,7 @@ class eirtModel(model):
             self.fitError.append(self.sUpdate())
             #print self.fitError[-1]
             
-            if self.fitError[-3]-self.fitError[-1]<.01:
+            if len(self.fitError)>2 and self.fitError[-1]-self.fitError[-3]<.001:
                 noimprov+=1
             else:
                 noimprov=0
@@ -211,13 +210,15 @@ class eirtModel(model):
             
             self.fitError.append(self.kcUpdate())
             #print self.fitError[-1]
-            if self.fitError[-3]-self.fitError[-1]<.01:
+            if len(self.fitError)>2 and self.fitError[-1]-self.fitError[-3]<.001:
                 noimprov+=1
             else:
                 noimprov=0
             if noimprov>1:
                 #print "Improvement threshold reached at 2 iteration", i
                 break
+            self.normalizeParameters()
+        print "Fiterrors", self.fitError
         return self.fitError[-1]
         
     def normalizeParameters(self):
@@ -226,6 +227,7 @@ class eirtModel(model):
         if avga!=0:
             self.ca/=avga
             self.st*=avga
+            self.se*=avga
     
 
 #        plt.figure(1)
