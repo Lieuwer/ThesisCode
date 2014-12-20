@@ -21,22 +21,64 @@ from experiment import experiment
 from experimentProcessing import experimentProcessing
 
 def main():
+    models=[]
 #    data=edata.load("algebra0506.edata")
 #    print len(data.ikc)
-    datset="algebra0506"
+    datset="algebra"
     basefile="D:\\spyderstuff\\ThesisCode\\Experiments\\1119"+datset+"\\"
-##    np.seterr(all="raise")
-    models=["afm","pfa","eirt"]
-    splits=[6,8,12,16,32]
-    models=["afm"]
-    splits=[12]
-    for split in splits:
-        for model in models:
-            print "\nStarting experiment:", model,split
-#            exp=experiment.load(basefile+model+str(split)+".exp") 
-            exp=experiment(model,model+str(split))
-            exp.runExperiment(split,10,datset+".edata")
-            exp.determineStds()
+###    np.seterr(all="raise")
+#    models=["afm","pfa","eirt"]
+#    splits=[6,8,12,16,32]
+##    models=["afm","pfa"]
+##    splits=[12]
+#    for split in splits:
+#        for model in models:
+#            print "\nStarting experiment:", model,split
+#            exp=experiment.load(basefile+model+str(split)+".exp")
+#            print model,split,exp.getSizes()
+##            exp=experiment(model,model+str(split))
+##            exp.runExperiment(split,10,datset+".edata")
+##            exp.determineStds()
+
+
+    exp1=experiment.load(basefile+"eirt32.exp")
+    exp2=experiment.load(basefile+"eirt6.exp")
+    par1=[]
+    par2=[]
+    m1=exp1.models[0]
+    m2=exp2.models[0]
+    skip1=0
+    skip2=0
+    for i in range(exp1.mainmodel.data.nrkc):
+        cont=True
+        if i in m1.data.kcmis:
+            skip1+=1
+            cont=False
+        if i in m2.data.kcmis:
+            skip2+=1 
+            cont=False
+        if cont:
+            par1.append(abs(m1.parameters[1][i-skip1]))
+            par2.append(abs(m2.parameters[1][i-skip2]))
+#
+#
+    plt.figure(0)
+    plt.xlabel("Parameter size little data")
+    plt.ylabel("Parameter size much data")
+    plt.scatter(par1,par2)
+    edge=min([max(par1),max(par2)])
+    plt.plot([0,edge],[0,edge])
+
+    plt.figure(1)
+    fig,ax=plt.subplots(1,1)
+    ax.set_ylim((0,.5))
+    ax.set_xlim((0,1))
+    plt.xlabel("Parameter size little data")
+    plt.ylabel("Parameter size much data")
+    plt.scatter(par1,par2)
+    plt.plot([0,.5],[0,.5])
+
+
 
 #    exp=experiment.load("pfa6exp.exp")
 ###    print exp.mainmodel.data.nrs
@@ -49,11 +91,38 @@ def main():
 #    exp.determineStds()
 
     #29-8-14 Fisher info experiment. Get some outliers atm
-#    data=edata.load("train2.edata")
+#    models=[]
+#    likely=[]
+#    data=edata.load("gong.edata")
 #    data.beforeSplitCleaning()
 #    data.splitCleaning()
-##    model=afmModel(data,False)
-##    model.fit()
+#    for i in range(5):
+#        model=eirtModel(data,True)
+#        model.fit()
+#        models.append(model)
+#        likely.append(model.dataLikely())
+#    comps=0
+##    
+#    npars=4
+#    norm=np.zeros((npars))
+#    for i in range(npars):
+#        norm[i]=sum(abs(models[0].parameters[i]))       
+#    pars=np.zeros((npars))
+#    maxi=np.zeros((npars))
+#    for i in range(len(models)):
+#        for j in range(i):
+#            comps+=1
+#            for k in range(npars):
+#                maxi[k]=max([maxi[k],max(abs(models[i].parameters[k]-models[j].parameters[k]))])
+#                pars[k]+=sum(abs(2*(models[i].parameters[k]-models[j].parameters[k])/(models[i].parameters[k]+models[j].parameters[k])))
+#    pars/=(norm*comps)
+#    
+#    print "norm avg dif",pars
+#    print "log ll",likely
+#    print "max",maxi
+#    
+    
+            
 ##    model.save("testing.afm")
 #    model=afmModel.load("testing.afm")
 #    model.testSecond()

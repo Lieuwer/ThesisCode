@@ -130,8 +130,9 @@ class experimentProcessing():
         invar=[]
         totvar=[]
         ranks=[]
-        
-        
+        llist=[]
+        rlist=[]
+        alist=[]
         for i in range(len(models)):
             ranks.append([])
             invar.append([])
@@ -167,12 +168,14 @@ class experimentProcessing():
             llikely=[]
             totRanks=[]
             inhRanks=[]
+            AIC=[]
             for i in range(len(models)):
                 inhRanks.append([])
                 totRanks.append([])
                 params.append(np.zeros((len(splits),nrPars[i]*2)))
                 aprimes.append([])
                 llikely.append([])
+                AIC.append([])
             basefile="D:\\spyderstuff\\ThesisCode\\Experiments\\1119"+dataset+"\\"
             for i,split in enumerate(splits):
                 for j,model in enumerate(models):
@@ -188,6 +191,14 @@ class experimentProcessing():
                     params[j][i,:]=np.concatenate([inf.avgtotsd,inf.avginhsd])
                     aprimes[j].append(np.mean(inf.aprimes))
                     llikely[j].append(np.mean(inf.lLikely))
+                    pars=0
+                    if model=="afm":
+                        pars=inf.nrs*1.0/split+2*inf.nrkc
+                    if model=="pfa":
+                        pars=inf.nrs*1.0/split+3*inf.nrkc
+                    if model=="eirt":
+                        pars=inf.nrs*2.0/split+2*inf.nrkc
+                    AIC[j].append(-2*np.mean(inf.lLikely)+pars/np.log(inf.records))
                     avginhrank=np.mean(inf.rankOrdersInh,0)
                     inhRanks[j].append(avginhrank)
                     totRanks[j].append(np.sum(inf.rankOrderSeen,(1,2))/((split**2-split)/2))
@@ -195,7 +206,11 @@ class experimentProcessing():
                         invar[j][l][k]=np.concatenate([invar[j][l][k],inf.avgvariancesInh[l]])
                         totvar[j][l][k]=np.concatenate([totvar[j][l][k],inf.variancesSeen[l]])
                         ranks[j][l][k].append(stat.spearmanr(inf.avgvariancesInh[l],inf.variancesSeen[l])[0])
-            nrslist=[] 
+            nrslist=[]
+            
+            llist.append(llikely)
+            rlist.append(totRanks)
+            alist.append(aprimes)
             for i in splits:
                 nrslist.append((recperkc/i))
             plt.figure(0)
@@ -205,7 +220,7 @@ class experimentProcessing():
             plt.figure(1)
             for i,model in enumerate(models):
                 for j in range(nrPars[i]):
-                    plt.plot(llikely[i],params[i][:,j],plottypes[i],color=colors[j])
+                    plt.plot(AIC[i],np.array(totRanks[i])[:,j],plottypes[i],color=colors[j])
                     
         
             plt.figure(2)
@@ -235,20 +250,29 @@ class experimentProcessing():
                 print " part looked at",j
                 totalin=np.array([])
                 totalto=np.array([])
+                                
                 
                 for k,dat in enumerate(datasets):
-                    print "%.2f(%.2f)"%(stat.spearmanr(invar[i][j][k],totvar[i][j][k])[0],np.mean(ranks[i][j][k]))
-                    print "  dataset:", dat, stat.spearmanr(invar[i][j][k],totvar[i][j][k])[0]
-                    print "   Average over splits:",np.mean(ranks[i][j][k])
-                    totalin=np.concatenate([invar[i][j][k],totalin])
-                    totalto=np.concatenate([totvar[i][j][k],totalto])
-                print "  Overall:",stat.spearmanr(totalin,totalto)[0]
-                print "%.2f(%.2f)"%(stat.spearmanr(totalin,totalto)[0],np.mean(ranks[i][j])) 
+#                    print "%.2f(%.2f)"%(stat.spearmanr(invar[i][j][k],totvar[i][j][k])[0],np.mean(ranks[i][j][k]))
+#                    print "  dataset:", dat, stat.spearmanr(invar[i][j][k],totvar[i][j][k])[0]
+#                    print "   Average over splits:",np.mean(ranks[i][j][k])
+                    totalin=np.concatenate([llist[k][i],totalin])
+                    totalto=np.concatenate([np.array(rlist[k][i])[:,j],totalto])
+#                print "  Overall:",stat.spearmanr(totalin,totalto)[0]
+                print "%.2f(%.2f)"%(stat.spearmanr(totalin,totalto)[0],stat.kendalltau(totalin,totalto)[0])
+#                for k,dat in enumerate(datasets):
+#                    print "%.2f(%.2f)"%(stat.spearmanr(invar[i][j][k],totvar[i][j][k])[0],np.mean(ranks[i][j][k]))
+#                    print "  dataset:", dat, stat.spearmanr(invar[i][j][k],totvar[i][j][k])[0]
+#                    print "   Average over splits:",np.mean(ranks[i][j][k])
+#                    totalin=np.concatenate([invar[i][j][k],totalin])
+#                    totalto=np.concatenate([totvar[i][j][k],totalto])
+#                print "  Overall:",stat.spearmanr(totalin,totalto)[0]
+#                print "%.2f(%.2f)"%(stat.spearmanr(totalin,totalto)[0],np.mean(ranks[i][j])) 
                     
             
 if __name__ == "__main__":
-        experimentProcessing.allexp()
-        assert(False)
+#        experimentProcessing.allexp()
+#        assert(False)
 
 #        inf=experimentProcessing.load("eirt12.info")
 #        inf.process()
@@ -256,7 +280,7 @@ if __name__ == "__main__":
 #        assert(False)
     
         temp=np.zeros((2,5))
-        pick=0
+        pick=2
         datsets=["bridge","algebra","gong"]
         basefile="D:\\spyderstuff\\ThesisCode\\Experiments\\1119"+datsets[pick]+"\\"
         models=['afm','pfa','eirt']
@@ -297,22 +321,28 @@ if __name__ == "__main__":
                 inf=experimentProcessing.load(basefile+model+str(split)+".info")
                 print "parvar inf", np.mean(np.array(inf.totparvar),0)[1],np.std(np.array(inf.totparvar),0)[1]                
                 nrs=inf.records*1.0/inf.nrkc
-                inf.process()                            
+                inf.process()
+                                         
                 temp[0,i]+=len(inf.kcLeftOut)
                 totK=0.0
                 for l in inf.KCCleaned:
                     totK+=len(l)
                 temp[1,i]+=totK/len(inf.KCCleaned)
+                
+                print "left:",model, len(inf.kcLeftOut),totK/len(inf.KCCleaned)
                 #inf.rankOrder()
                 #nrs=len(inf.parametersMain[-1])*1.0
                 #needs to be normalized first...
                 
                 #change here!
-#                inf.avgtotsd/=np.std(np.array(inf.parametersMain[:nrPars[j]]),1)
-#                inf.avginhsd/=np.std(np.array(inf.parametersMain[:nrPars[j]]),1)
+                inf.avgtotsd/=np.mean(abs(np.array(inf.parametersMain[:nrPars[j]])),1)
+                inf.avginhsd/=np.mean(abs(np.array(inf.parametersMain[:nrPars[j]])),1)
 
-                inf.avgtotsd/=(np.mean(np.sqrt(np.array(inf.totparvar)),0)[:nrPars[j]])
-                inf.avginhsd/=(np.mean(np.sqrt(np.array(inf.inhparvar)),0)[:nrPars[j]])
+#                inf.avgtotsd/=(np.mean(np.sqrt(np.array(inf.totparvar)),0)[:nrPars[j]])
+#                inf.avginhsd/=(np.mean(np.sqrt(np.array(inf.inhparvar)),0)[:nrPars[j]])
+
+#                inf.avgtotsd/=(np.mean(np.sqrt(np.array(inf.totparvar)),0)[:nrPars[j]])
+#                inf.avginhsd/=(np.mean(np.sqrt(np.array(inf.inhparvar)),0)[:nrPars[j]])
                    
                 
                 
@@ -390,7 +420,8 @@ if __name__ == "__main__":
 ##
 ##
 ##        
-        plt.figure()
+        fig,ax=plt.subplots(1,1)
+        ax.set_ylim((0,2))
         plt.xlabel("Number of records per split per KC")
         plt.ylabel("Average normalized standard deviation over(/within) splits")
         for i,model in enumerate(models):
@@ -402,7 +433,7 @@ if __name__ == "__main__":
         
         
         fig,ax=plt.subplots(1,1)
-#        ax.set_ylim((0,8))
+        ax.set_ylim((0,5))
         plt.xlabel("Number of records per split per KC")
         plt.ylabel("Relative standard deviation of parameter values")
         for i,model in enumerate(models):
@@ -414,10 +445,11 @@ if __name__ == "__main__":
         plt.savefig(datsets[pick]+"allmodsparvar")
         
 ##
-        #Get a legend figure
+#        models=['LFA','PFA+','meIRT']
+#        #Get a legend figure
 #        plt.figure()
 #        labels=[]
-#        plt.plot([0,0],[1,1],"k-", label="Total")
+#        plt.plot([0,0],[1,1],"k-", label="Observed")
 #        labels.append(plt.plot([0,0],[1,1],"k--", label="Inherent")[0])
 #        for i in range(len(colors)):
 #            labels.append(plt.plot([0,0],[1,1],"-",label=paranames[i],color=colors[i]))

@@ -95,7 +95,7 @@ class experiment():
             self.parvartot.append(totparvar)
         self.save(self.filenamebase+".exp")
 
-
+    
     def determineStds(self):
         
         #Get some data on how many KCs and students were tossed out.
@@ -252,10 +252,7 @@ class experiment():
 #            plt.plot([fro, to], [fro, to],"k-")
 #
 #            plt.savefig(self.filenamebase+"in_tot_var"+self.mainmodel.paranames[i])
-                        
-                        
-   
-
+    
     def getVariances(self):
         
         mainmodel=self.mainmodel
@@ -337,8 +334,21 @@ class experiment():
             averageinternalvar[k]=np.delete(averageinternalvar[k],np.array(leaveout))
             averageinternalvar[k]=np.mean(np.sqrt(averageinternalvar[k]))
         return np.array(totalvar+averageinternalvar)
- 
-
+    
+    def getSizes(self):
+        if self.modeltype=="afm" or self.modeltype=="eirt":
+            kcpars=2
+        if self.modeltype=="pfa":
+            kcpars=3
+        pars=np.zeros(kcpars)
+        for m in self.models:
+            for i in range(kcpars):
+                pars[i]+=np.mean(abs(m.parameters[i]))
+        for i in range(kcpars):
+            pars[i]/=np.mean(abs(self.mainmodel.parameters[i]))
+        pars/=len(self.models)
+        return pars
+        
 if __name__ == "__main__":
     exp=experiment("pfa","pfaTest8e")
     exp.runExperiment(8,4,"gong.edata")
